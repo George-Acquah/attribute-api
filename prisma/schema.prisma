@@ -1,0 +1,89 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  img       String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  roles     UserRole[]
+  campaigns Campaign[] @relation("OwnerCampaigns")
+  interactions  Interaction[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  users UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  roleId String
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Campaign {
+  id      String @id @default(cuid())
+  name    String
+  ownerId String
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  owner User   @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  codes Code[]
+
+  @@map("campaigns")
+}
+
+model Code {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  campaignId String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+  interactions Interaction[]
+
+  @@map("codes")
+}
+
+model Interaction {
+  id  String @id  @default(cuid())
+  userId  String
+  codeId  String
+  type  String
+
+  metadata  Json?
+
+  timestamp DateTime  @default(now()) @map("timestamp") @db.Timestamptz()
+
+  code  Code @relation(fields: [codeId], references: [id])
+  user  User @relation(fields: [userId], references: [id])
+
+  @@map("interactions")
+}
+
