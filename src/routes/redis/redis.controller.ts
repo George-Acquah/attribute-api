@@ -12,6 +12,6 @@ export class RedisController {
 
     return res
       .status(isHealthy ? HttpStatus.OK : HttpStatus.BAD_REQUEST)
-      .json({ redisNew: isHealthy ? 'healthy n' : 'unhealthy' });
+      .json({ redisNew: isHealthy ? 'healthy new' : 'unhealthy' });
   }
 }

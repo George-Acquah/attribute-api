@@ -54,6 +54,7 @@ async function bootstrap() {
 
     await app.listen(port, '0.0.0.0', () => {
       console.log(`Listening at http://0.0.0.0:${port}`);
+      console.log('Ive really suffered, man');
     });
   } catch (err) {
     console.error('❌ Error during bootstrap:', err);
