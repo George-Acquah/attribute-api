@@ -69,7 +69,7 @@ WORKDIR /usr/src/app
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 
-COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node src/database/prisma ./prisma
 RUN pnpm exec prisma generate
 
 # Start the server
