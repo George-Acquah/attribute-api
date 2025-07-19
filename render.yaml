@@ -15,7 +15,6 @@ services:
       pnpm exec prisma generate
       pnpm run build
 
-    startCommand: pnpm run start:prod
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -26,9 +25,9 @@ services:
       - key: FIREBASE_PROJECT_ID
         value: demo-project
       - key: FIREBASE_PRIVATE_KEY
-        fromSecret: true
+        sync: false
       - key: FIREBASE_CLIENT_EMAIL
-        fromSecret: true
+        sync: false
       - key: REDIS_URL
         fromService:
           name: attribute-redis
