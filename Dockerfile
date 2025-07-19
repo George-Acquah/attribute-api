@@ -21,7 +21,7 @@ RUN pnpm install
 COPY --chown=node:node . .
 
 # Generate Prisma client
-RUN pnpm run prisma:generate
+RUN pnpm run prisma:generate && chown -R node:node node_modules/.prisma
 
 # Use non-root user
 USER node

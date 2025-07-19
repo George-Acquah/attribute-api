@@ -26,6 +26,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.2.0",
     "@prisma/client": "6.11.1",
@@ -81,7 +82,7 @@
   },
   "prisma": {
     "schema": "src/database/schema.prisma",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node src/database/seed.ts"
   },
   "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
 }

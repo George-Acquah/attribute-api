@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { User } from '@prisma/client';
 import {
@@ -14,69 +14,57 @@ import { RedisService } from 'src/shared/services/redis/redis.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private prisma: PrismaService,
     private readonly firebaseService: FirebaseAdminService,
     private readonly redisService: RedisService,
   ) {}
 
-  async verifyUser(
+  async authenticateUser(
     accessToken: string,
-  ): Promise<ApiResponse<{ decodedToken: DecodedIdToken; user: User }>> {
+    expiresIn: number,
+  ): Promise<ApiResponse<{ sessionCookie: string; user: User }>> {
     try {
       const decodedToken = await this.firebaseService.verifyToken(accessToken);
-      if (!decodedToken) {
+      if (!decodedToken || !decodedToken.email) {
         return new BadRequestResponse('Invalid token');
       }
+
       const user = await this.prisma.user.upsert({
         where: { email: decodedToken.email },
         create: {
           email: decodedToken.email,
           name: decodedToken.name || '',
           img: decodedToken.picture,
+          // uid: decodedToken.uid,
         },
         update: {
           name: decodedToken.name || '',
           img: decodedToken.picture,
         },
       });
-      if (!user) {
-        return new NotFoundResponse('User not found');
-      }
 
-      await this.firebaseService.setCustomClaims(decodedToken.uid, user.id);
-
-      const redisKey = `session:${decodedToken.uid}`;
-      await this.redisService.set(redisKey, accessToken, 60 * 60 * 24);
-      return new OkResponse(
-        { decodedToken, user },
-        'User verified successfully',
-      );
-    } catch (error) {
-      console.log('ERROR: ', error);
-      if (error instanceof Error) {
-        return new BadRequestResponse(error.message);
-      }
-      return new InternalServerErrorResponse();
-    }
-  }
-
-  async createSessionCookie(accessToken: string) {
-    try {
-      const expiresIn = 60 * 60 * 24 * 14 * 1000;
       const sessionCookie = await this.firebaseService.createSessionCookie(
         accessToken,
         expiresIn,
       );
-      return { sessionCookie, expiresIn };
+
+      const redisKey = `session:${decodedToken.uid}`;
+      await this.redisService.set(redisKey, sessionCookie, expiresIn / 1000);
+
+      return new OkResponse(
+        { sessionCookie, user },
+        'Authenticated successfully',
+      );
     } catch (error) {
-      throw new InternalServerErrorException();
+      this.logger.error('authenticateUser error:', error);
+      return new InternalServerErrorResponse();
     }
   }
 
   async getUserInfo(email: string): Promise<ApiResponse<User>> {
     try {
-      console.log(email);
       const user = await this.prisma.user.findUnique({
         where: { email },
       });
@@ -84,7 +72,8 @@ export class AuthService {
       if (!user) return new NotFoundResponse('User does not exist');
 
       return new OkResponse(user, 'User found');
-    } catch (_error) {
+    } catch (error) {
+      this.logger.error('getUserInfo error:', error);
       return new InternalServerErrorResponse();
     }
   }

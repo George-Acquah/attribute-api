@@ -4,6 +4,7 @@ import { ConsoleLogger, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ApiResponseInterceptor } from './shared/interceptors/api-response.interceptor';
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule, {
@@ -19,6 +20,7 @@ async function bootstrap() {
 
     const globalPrefix = 'api';
     app.setGlobalPrefix(globalPrefix);
+    app.useGlobalInterceptors(new ApiResponseInterceptor());
     app.use(cookieParser());
 
     // Swagger setup

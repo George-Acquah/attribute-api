@@ -6,7 +6,6 @@ import {
   PolicyHandler,
 } from '../decorators/policies.decorator';
 import { Request } from 'express';
-import { User } from '@prisma/client';
 
 @Injectable()
 export class PoliciesGuard implements CanActivate {
@@ -24,9 +23,7 @@ export class PoliciesGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest() as Request;
 
-    const ability = this.caslAbilityFactory.createForUser(
-      user as unknown as User,
-    );
+    const ability = this.caslAbilityFactory.createForUser(user);
 
     return handlers.every((handler) => handler(ability));
   }

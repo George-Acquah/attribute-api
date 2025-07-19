@@ -27,31 +27,30 @@ export class AuthController {
   ) {
     // Logic for handling user login
     try {
-      const result = await this.authService.verifyUser(token);
+      const expiresIn = 60 * 60 * 24 * 14 * 1000;
+      const result = await this.authService.authenticateUser(token, expiresIn);
 
-      const { sessionCookie, expiresIn } =
-        await this.authService.createSessionCookie(token);
-
-      res.cookie('session', sessionCookie, {
+      res.cookie('session', result.data.sessionCookie, {
         maxAge: expiresIn,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       });
 
-      return res.status(result.statusCode).json(result);
+      res.status(result.statusCode || 200);
+      return result;
     } catch (error) {
-      res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json(new InternalServerErrorResponse());
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR);
+      return new InternalServerErrorResponse();
     }
   }
 
   @UseGuards(FirebaseAuthGuard)
   @Get('me')
-  async getMe(@CurrentUser('email') email: string, @Res() res: Response) {
+  async getMe(@CurrentUser('email') email: string) {
     const result = await this.authService.getUserInfo(email);
-    return res.status(result.statusCode).json(result);
+    this.logger.log(result);
+    return result;
   }
 
   @UseGuards(FirebaseAuthGuard)
@@ -63,6 +62,7 @@ export class AuthController {
     const result = await this.authService.revokeTokens(token);
     res.clearCookie('session');
 
-    return res.status(result.statusCode).json(result);
+    res.status(result.statusCode || 200);
+    return result;
   }
 }

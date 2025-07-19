@@ -40,9 +40,9 @@ class NotFoundResponse extends ApiResponse<null> {
   }
 }
 
-class FResponse extends ApiResponse<null> {
-  constructor(message = 'Not Found') {
-    super(HttpStatus.NOT_FOUND, message, null);
+class ForbiddenResponse extends ApiResponse<null> {
+  constructor(message = 'Access Dnied') {
+    super(HttpStatus.FORBIDDEN, message, null);
   }
 }
 
@@ -53,5 +53,5 @@ export {
   BadRequestResponse,
   NotFoundResponse,
   InternalServerErrorResponse,
-  FResponse,
+  ForbiddenResponse,
 };

@@ -9,46 +9,65 @@ import {
 import { Request } from 'express';
 import { FirebaseAdminService } from '../services/firebase/firebase-admin.service';
 import { RedisService } from '../services/redis/redis.service';
+import { UsersService } from 'src/routes/users/users.service';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
   private logger = new Logger(FirebaseAuthGuard.name);
+
   constructor(
     private firebaseAdminService: FirebaseAdminService,
-    private readonly redisService: RedisService,
+    private userService: UsersService,
+    private redisService: RedisService, // optional
   ) {}
 
-  public async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request: Request = context.switchToHttp().getRequest();
-    const sessionCookie = request.cookies['session'] as
-      | string
-      | undefined
-      | null;
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest() as Request;
+    const sessionCookie = request.cookies?.session;
 
-    if (!sessionCookie) return false;
+    if (!sessionCookie) {
+      this.logger.warn('Missing session cookie');
+      throw new UnauthorizedException('Missing session cookie');
+    }
 
     try {
-      const decodedClaims = await this.firebaseAdminService.verifySessionCookie(
+      // 1. Verify Firebase session
+      const decoded = await this.firebaseAdminService.verifySessionCookie(
         sessionCookie,
       );
+      const uid = decoded.uid;
 
-      if (!decodedClaims.email) return false;
+      // 2. Try to fetch user info from Redis
+      const redisKey = `user:role:${uid}`;
+      const userData = await this.redisService.get<_ISafeUser>(redisKey);
 
-      const redisKey = `session:${decodedClaims.uid}`;
-      const cachedToken = await this.redisService.get(redisKey);
-      this.logger.log('Redis has cached token: ', cachedToken);
+      let user: _ISafeUser;
+      if (userData) {
+        user = userData;
+        this.logger.log(`Loaded user role from Redis: ${user.id}`);
+      } else {
+        // 3. Fallback to DB
+        user = await this.userService.findByUid(uid);
+        if (!user) {
+          throw new UnauthorizedException('User not found');
+        }
 
-      if (!cachedToken || cachedToken !== sessionCookie) {
-        throw new UnauthorizedException('Session expired or invalid');
+        // 4. Cache the result in Redis for 10 minutes
+        await this.redisService.set(redisKey, user, 600);
       }
 
-      request['user'] = {
-        id: decodedClaims.dbUserId,
-        email: decodedClaims.email,
+      // 5. Attach user to request
+      request.user = {
+        id: user.id,
+        // uid,
+        email: user.email,
+        // role: user.role,
       };
+
       return true;
     } catch (error) {
-      throw new UnauthorizedException('Invalid Firebase ID token');
+      this.logger.error('AuthGuard error:', error.message || error);
+      throw new UnauthorizedException('Authentication failed');
     }
   }
 }

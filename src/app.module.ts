@@ -5,6 +5,8 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './shared/modules/prisma.module';
 import { RedisModule } from './shared/modules/redis.module';
 import { RedisController } from './routes/redis/redis.controller';
+import { CampaignModule } from './routes/campaign/campaign.module';
+import { UsersModule } from './routes/users/users.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { RedisController } from './routes/redis/redis.controller';
     PrismaModule,
     RedisModule,
     AuthModule,
+    CampaignModule,
+    UsersModule,
   ],
   providers: [],
   controllers: [RedisController],

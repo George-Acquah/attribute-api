@@ -15,11 +15,11 @@ export type AppAbility = PureAbility<[string, AppSubjects], PrismaQuery>;
 
 @Injectable()
 export class CaslAbilityFactory {
-  createForUser(user: User) {
+  createForUser(user: _ISafeUser) {
     const { can, build } = new AbilityBuilder<AppAbility>(createPrismaAbility);
 
     if (user.email) {
-      can(Action.Manage, 'all'); // read-write access to everything
+      can(Action.Manage, 'all');
     } else {
       can(Action.Read, 'all');
     }
@@ -29,7 +29,6 @@ export class CaslAbilityFactory {
     can(Action.Update, 'Campaign', 'all', { ownerId: user.id });
 
     return build({
-      // Read https://casl.js.org/v6/en/guide/subject-type-detection#use-classes-as-subject-types for details
       detectSubjectType: (item) =>
         item.constructor as unknown as ExtractSubjectType<AppSubjects>,
     });
