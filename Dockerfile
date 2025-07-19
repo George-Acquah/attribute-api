@@ -71,11 +71,13 @@ WORKDIR /usr/src/app
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 COPY --chown=node:node --from=build /usr/src/app/src/database ./prisma
+COPY --chown=node:node --from=build /usr/src/app/src/database/migrations ./prisma/migrations
 
-RUN pnpm run prisma:generate
+RUN npx prisma generate && \
+    npx prisma migrate deploy
 
 # Start the server
-CMD ["pnpm", "run", "start:prod"]
+CMD ["node", "dist/main.js"]
 
 
 
