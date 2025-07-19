@@ -1,37 +1,45 @@
 services:
   - type: web
-    name: firebase-auth-api
     env: docker
-    repo: https://github.com/YOUR_USERNAME/YOUR_REPO
+    name: attribute-api1
+    repo: https://github.com/George-Acquah/attribute-api.git
     plan: free
     branch: main
     dockerfilePath: ./Dockerfile
     autoDeploy: true
+    # Build commands (Render-specific)
+    buildCommand: |
+      corepack enable
+      corepack prepare pnpm@latest --activate
+      pnpm install
+      pnpm exec prisma generate
+      pnpm run build
+
+    startCommand: pnpm run start:prod
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: firebase-auth-db
+          name: attribute-postgres
           property: connectionString
       - key: NODE_ENV
         value: production
       - key: FIREBASE_PROJECT_ID
         value: demo-project
-      - key: FIREBASE_AUTH_EMULATOR_HOST
-        value: host.docker.internal:9099
-      - key: REDIS_HOST
+      - key: FIREBASE_PRIVATE_KEY
+        fromSecret: true
+      - key: FIREBASE_CLIENT_EMAIL
+        fromSecret: true
+      - key: REDIS_URL
         fromService:
-          name: firebase-auth-redis
+          name: attribute-redis
           type: redis
-          property: host
-      - key: REDIS_PORT
-        value: 6379
+          property: connectionString
+
+  - type: redis
+    name: attribute-redis
+    plan: free
 
 databases:
-  - name: firebase-auth-db
+  - name: attribute-postgres
     plan: free
     postgresMajorVersion: 15
-
-services:
-  - type: redis
-    name: firebase-auth-redis
-    plan: free

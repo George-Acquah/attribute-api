@@ -1,22 +1,44 @@
 import { Provider } from '@nestjs/common';
 import Redis from 'ioredis';
 import { RedisClient, IRedisConfig } from '../interfaces/redis.interface';
+import { ConfigService } from '@nestjs/config';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
 
 export const RedisProvider: Provider = {
   provide: REDIS_CLIENT,
-  useFactory: (): RedisClient => {
+  inject: [ConfigService],
+  useFactory: async (configService: ConfigService): Promise<RedisClient> => {
+    const redisUrl = configService.get<string>('REDIS_URL');
+
+    if (redisUrl) {
+      const redis = new Redis(redisUrl);
+      await verifyRedisConnection(redis);
+      return redis;
+    }
+
     const redisConfig: IRedisConfig = {
-      host: process.env.REDIS_HOST || 'redis',
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      ...(process.env.REDIS_PASSWORD && {
-        password: process.env.REDIS_PASSWORD,
+      host: configService.get<string>('REDIS_HOST', 'redis'),
+      port: configService.get<number>('REDIS_PORT', 6379),
+      ...(configService.get('REDIS_PASSWORD') && {
+        password: configService.get<string>('REDIS_PASSWORD'),
       }),
-      ...(process.env.REDIS_DB && { db: parseInt(process.env.REDIS_DB, 10) }),
-      ...(process.env.REDIS_TLS === 'true' && { tls: {} }),
+      ...(configService.get('REDIS_DB') && {
+        db: configService.get<number>('REDIS_DB'),
+      }),
+      ...(configService.get('REDIS_TLS') === 'true' && { tls: {} }),
     };
 
-    return new Redis(redisConfig);
+    const redis = new Redis(redisConfig);
+    await verifyRedisConnection(redis);
+    return redis;
   },
 };
+
+async function verifyRedisConnection(redis: Redis): Promise<void> {
+  try {
+    await redis.ping();
+  } catch (error) {
+    throw new Error(`Redis connection failed: ${error.message}`);
+  }
+}
