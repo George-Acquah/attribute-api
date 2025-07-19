@@ -72,7 +72,7 @@ COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 COPY --chown=node:node --from=build /usr/src/app/src/database ./prisma
 
-RUN pnpm exec prisma generate
+RUN pnpm run prisma:generate
 
 # Start the server
 CMD ["pnpm", "run", "start:prod"]
