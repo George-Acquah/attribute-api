@@ -8,12 +8,12 @@ services:
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     # Build commands (Render-specific)
-    buildCommand: |
-      corepack enable
-      corepack prepare pnpm@latest --activate
-      pnpm install
-      pnpm exec prisma generate
-      pnpm run build
+    # buildCommand: |
+    #   corepack enable
+    #   corepack prepare pnpm@latest --activate
+    #   pnpm install
+    #   pnpm exec prisma generate
+    #   pnpm run build
 
     envVars:
       - key: DATABASE_URL

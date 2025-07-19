@@ -69,15 +69,14 @@ WORKDIR /usr/src/app
 
 # Copy production-ready node_modules and built files
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node package.json pnpm-lock.yaml ./
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 COPY --chown=node:node --from=build /usr/src/app/src/database ./prisma
-COPY --chown=node:node --from=build /usr/src/app/src/database/migrations ./prisma/migrations
 
-RUN npx prisma generate && \
-    npx prisma migrate deploy
+RUN pnpm run prisma:generate
 
 # Start the server
-CMD ["node", "dist/main.js"]
+CMD ["pnpm", "run", "start:migrate:prod"]
 
 
 
