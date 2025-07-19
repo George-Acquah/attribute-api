@@ -37,6 +37,7 @@ services:
   - type: redis
     name: attribute-redis
     plan: free
+    ipAllowList: []
 
 databases:
   - name: attribute-postgres
