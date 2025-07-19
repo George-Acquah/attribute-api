@@ -5,7 +5,7 @@ FROM node:20 as development
 
 RUN apt-get update && apt-get install -y openssl
 
-# Install pnpm globally
+# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Set working directory
@@ -13,18 +13,20 @@ WORKDIR /usr/src/app
 
 # Copy dependency manifests
 COPY --chown=node:node package.json pnpm-lock.yaml ./
+
+# Copy only the prisma schema to allow generate early
 COPY --chown=node:node src/database ./src/database
 
-# Install dependencies for development
+# Install dev dependencies
 RUN pnpm install
 
-# Copy application code
+# Copy the rest of the application
 COPY --chown=node:node . .
 
 # Generate Prisma client
 RUN pnpm run prisma:generate && chown -R node:node node_modules/.prisma
 
-# Use non-root user
+# Use non-root user for development
 USER node
 
 ###################
@@ -40,7 +42,7 @@ WORKDIR /usr/src/app
 COPY --chown=node:node package.json pnpm-lock.yaml ./
 COPY --chown=node:node src/database ./src/database
 
-# Copy node_modules from development stage
+# Copy dev node_modules
 COPY --chown=node:node --from=development /usr/src/app/node_modules ./node_modules
 
 # Copy app source
@@ -49,10 +51,10 @@ COPY --chown=node:node . .
 # Build the app
 RUN pnpm run build
 
-# Set production environment
+# Set environment
 ENV NODE_ENV production
 
-# Reinstall only production dependencies
+# Install only production dependencies
 RUN rm -rf node_modules && pnpm install --prod --frozen-lockfile && pnpm store prune
 
 USER node
@@ -62,21 +64,26 @@ USER node
 ###################
 FROM node:20-alpine as production
 
-# Enable pnpm (optional if not using pnpm in runtime)
+# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /usr/src/app
 
-# Copy production-ready node_modules and built files
-COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
+# Copy production-ready assets
 COPY --chown=node:node package.json pnpm-lock.yaml ./
+COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
-COPY --chown=node:node --from=build /usr/src/app/src/database ./prisma
+COPY --chown=node:node --from=build /usr/src/app/src/database ./src/database
 
+# Generate Prisma client for runtime
 RUN pnpm run prisma:generate
 
-# Start the server
+# Run the seed script
+RUN pnpm exec prisma db seed
+
+# Start the app with migration
 CMD ["pnpm", "run", "start:migrate:prod"]
+
 
 
 
