@@ -78,9 +78,6 @@ COPY --chown=node:node --from=build /usr/src/app/src/database ./src/database
 # Generate Prisma client for runtime
 RUN pnpm run prisma:generate
 
-# Run the seed script
-RUN pnpm exec prisma db seed
-
 # Start the app with migration
 CMD ["pnpm", "run", "start:migrate:prod"]
 
