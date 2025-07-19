@@ -13,7 +13,7 @@ WORKDIR /usr/src/app
 
 # Copy dependency manifests
 COPY --chown=node:node package.json pnpm-lock.yaml ./
-COPY --chown=node:node src/database/prisma ./src/database/prisma
+COPY --chown=node:node src/database ./src/database
 
 # Install dependencies for development
 RUN pnpm install
@@ -38,7 +38,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /usr/src/app
 
 COPY --chown=node:node package.json pnpm-lock.yaml ./
-COPY --chown=node:node src/database/prisma ./src/database/prisma
+COPY --chown=node:node src/database ./src/database
 
 # Copy node_modules from development stage
 COPY --chown=node:node --from=development /usr/src/app/node_modules ./node_modules
@@ -70,7 +70,7 @@ WORKDIR /usr/src/app
 # Copy production-ready node_modules and built files
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
-COPY --chown=node:node --from=build /usr/src/app/src/database/prisma ./prisma
+COPY --chown=node:node --from=build /usr/src/app/src/database ./prisma
 
 RUN pnpm exec prisma generate
 
