@@ -33,10 +33,14 @@ FROM node:20-alpine as build
 
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm allow-scripts
 
 WORKDIR /usr/src/app
 
 COPY --chown=node:node package.json pnpm-lock.yaml ./
+
+# Install deps (needed for prisma generate)
+RUN pnpm install
 
 # Copy node_modules from development stage
 COPY --chown=node:node --from=development /usr/src/app/node_modules ./node_modules
@@ -45,6 +49,8 @@ COPY --chown=node:node --from=development /usr/src/app/node_modules/.prisma ./no
 
 # Copy app source
 COPY --chown=node:node . .
+
+RUN pnpm run prisma:generate
 
 # Build the app
 RUN pnpm run build
