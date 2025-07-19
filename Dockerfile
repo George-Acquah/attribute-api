@@ -40,6 +40,8 @@ COPY --chown=node:node package.json pnpm-lock.yaml ./
 
 # Copy node_modules from development stage
 COPY --chown=node:node --from=development /usr/src/app/node_modules ./node_modules
+# Copy generated Prisma client
+COPY --chown=node:node --from=development /usr/src/app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy app source
 COPY --chown=node:node . .
@@ -67,6 +69,7 @@ WORKDIR /usr/src/app
 
 # Copy production-ready node_modules and built files
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node --from=build /usr/src/app/node_modules/.prisma ./node_modules/.prisma
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 
 # Start the server
