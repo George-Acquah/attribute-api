@@ -26,7 +26,11 @@ async function bootstrap() {
 
         app.enableCors({
           origin: isProduction
-            ? ['https://attribute-kappa.vercel.app']
+            ? [
+                'https://attribute-kappa.vercel.app',
+                'https://attribute-api1.onrender.com',
+                `http://localhost:${port}`,
+              ]
             : [
                 `http://localhost:${port}`,
                 `http://localhost:3000`,
@@ -52,7 +56,7 @@ async function bootstrap() {
       .setLicense('MIT', 'https://opensource.org/licenses/MIT')
       .setTermsOfService('#')
       .addServer('http://localhost:' + port, 'Local development server')
-      .addServer('https://your-production-domain.com', 'Production server')
+      .addServer('https://attribute-api1.onrender.com', 'Production server')
       .addTag('Auth', 'Authentication and user management')
       .build();
 
