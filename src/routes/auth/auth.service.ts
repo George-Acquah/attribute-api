@@ -1,9 +1,13 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { User } from '@prisma/client';
 import {
   ApiResponse,
   BadRequestResponse,
+  ForbiddenResponse,
   InternalServerErrorResponse,
   NotFoundResponse,
   OkResponse,
@@ -11,6 +15,7 @@ import {
 import { FirebaseAdminService } from 'src/shared/services/firebase/firebase-admin.service';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 import { RedisService } from 'src/shared/services/redis/redis.service';
+import { RedisKeyPrefixes } from 'src/shared/constants/redis.constants';
 
 @Injectable()
 export class AuthService {
@@ -58,7 +63,13 @@ export class AuthService {
         'Authenticated successfully',
       );
     } catch (error) {
-      this.logger.error('authenticateUser error:', error);
+      this.logger.error('authenticatedUser error:', error);
+        if (error instanceof Error && 'code' in error) {
+          const firebaseError = error as { code: string; message: string };
+          if (firebaseError.code.startsWith('auth/')) {
+            return new ForbiddenResponse(firebaseError.message);
+          }
+        }
       return new InternalServerErrorResponse();
     }
   }
@@ -78,13 +89,20 @@ export class AuthService {
     }
   }
 
-  async revokeTokens(sessionToken: string): Promise<ApiResponse<null>> {
+  async revokeTokens(
+    sessionToken: string,
+    uid: string,
+  ): Promise<ApiResponse<null>> {
     try {
       const decodedClaims = await this.firebaseService.verifySessionCookie(
         sessionToken,
       );
 
       await this.firebaseService.removeRefreshTokens(decodedClaims.sub);
+
+      const redisKey = `${RedisKeyPrefixes.FIREBASE_GUARD_USER_KEY}${uid}`;
+
+      await this.redisService.del(redisKey);
 
       return new OkResponse(null);
     } catch (_error) {

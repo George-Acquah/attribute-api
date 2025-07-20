@@ -3,46 +3,48 @@ import { HttpStatus } from '@nestjs/common';
 class ApiResponse<T> {
   constructor(
     public statusCode: number,
-
-    public message: string,
-
     public data: T,
+
+    public message?: string,
+
+    public error?: string,
+
   ) {}
 }
 
 class OkResponse<T> extends ApiResponse<T> {
   constructor(data: T, message = 'OK') {
-    super(HttpStatus.OK, message, data);
+    super(HttpStatus.OK, data,  message, null);
   }
 }
 
 class InternalServerErrorResponse extends ApiResponse<null> {
-  constructor(message = 'Internal Server Error') {
-    super(HttpStatus.INTERNAL_SERVER_ERROR, message, null);
+  constructor(error = 'Internal Server Error') {
+    super(HttpStatus.INTERNAL_SERVER_ERROR, null, null, error);
   }
 }
 
 class CreatedResponse<T> extends ApiResponse<T> {
   constructor(data: T, message = 'Created') {
-    super(HttpStatus.CREATED, message, data);
+    super(HttpStatus.CREATED, data, message, null);
   }
 }
 
 class BadRequestResponse extends ApiResponse<null> {
-  constructor(message = 'Bad Request') {
-    super(HttpStatus.BAD_REQUEST, message, null);
+  constructor(error = 'Bad Request') {
+    super(HttpStatus.BAD_REQUEST, null, null, error);
   }
 }
 
 class NotFoundResponse extends ApiResponse<null> {
-  constructor(message = 'Not Found') {
-    super(HttpStatus.NOT_FOUND, message, null);
+  constructor(error = 'Not Found') {
+    super(HttpStatus.NOT_FOUND, null, null, error);
   }
 }
 
 class ForbiddenResponse extends ApiResponse<null> {
-  constructor(message = 'Access Dnied') {
-    super(HttpStatus.FORBIDDEN, message, null);
+  constructor(error = 'Access Denied') {
+    super(HttpStatus.FORBIDDEN, null, null, error);
   }
 }
 

@@ -17,11 +17,30 @@ async function bootstrap() {
     //Get the ConfigService
     const configService = app.get(ConfigService);
     const port = parseInt(configService.get('PORT')) || 3300;
+    const isProduction = process.env.NODE_ENV === 'production';
 
     const globalPrefix = 'api';
     app.setGlobalPrefix(globalPrefix);
     app.useGlobalInterceptors(new ApiResponseInterceptor());
     app.use(cookieParser());
+
+        app.enableCors({
+          origin: isProduction
+            ? ['https://attribute-kappa.vercel.app']
+            : [
+                `http://localhost:${port}`,
+                `http://localhost:3000`,
+                'https://attribute-kappa.vercel.app',
+              ],
+          credentials: true,
+          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+          allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Requested-With',
+            'Accept',
+          ],
+        });
 
     // Swagger setup
     const swaggerConfig = new DocumentBuilder()
@@ -33,6 +52,7 @@ async function bootstrap() {
       .setLicense('MIT', 'https://opensource.org/licenses/MIT')
       .setTermsOfService('#')
       .addServer('http://localhost:' + port, 'Local development server')
+      .addServer('https://your-production-domain.com', 'Production server')
       .addTag('Auth', 'Authentication and user management')
       .build();
 
@@ -41,25 +61,20 @@ async function bootstrap() {
       swaggerOptions: {
         docExpansion: 'none',
         persistAuthorization: true,
+        tryItOutEnabled: true,
+        withCredential: true,
       },
       customSiteTitle: 'Firebase Test API Docs',
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      app.enableCors({
-        origin: [
-          `http://localhost:${port}`,
-          'https://attribute-kappa.vercel.app',
-        ],
-        credentials: true,
-      });
-    }
-
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true
+    }));
 
     await app.listen(port, '0.0.0.0', () => {
       console.log(`Listening at http://0.0.0.0:${port}`);
-      console.log('Ive really suffered, man');
     });
   } catch (err) {
     console.error('❌ Error during bootstrap:', err);

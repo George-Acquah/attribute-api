@@ -10,6 +10,7 @@ import { Request } from 'express';
 import { FirebaseAdminService } from '../services/firebase/firebase-admin.service';
 import { RedisService } from '../services/redis/redis.service';
 import { UsersService } from 'src/routes/users/users.service';
+import { RedisKeyPrefixes } from '../constants/redis.constants';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
@@ -38,7 +39,7 @@ export class FirebaseAuthGuard implements CanActivate {
       const uid = decoded.uid;
 
       // 2. Try to fetch user info from Redis
-      const redisKey = `user:role:${uid}`;
+      const redisKey = `${RedisKeyPrefixes.FIREBASE_GUARD_USER_KEY}${uid}`;
       const userData = await this.redisService.get<_ISafeUser>(redisKey);
 
       let user: _ISafeUser;
@@ -47,7 +48,7 @@ export class FirebaseAuthGuard implements CanActivate {
         this.logger.log(`Loaded user role from Redis: ${user.id}`);
       } else {
         // 3. Fallback to DB
-        user = await this.userService.findByUid(uid);
+        user = await this.userService.findByUid(decoded.email);
         if (!user) {
           throw new UnauthorizedException('User not found');
         }

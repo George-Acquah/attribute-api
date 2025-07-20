@@ -1,14 +1,18 @@
 import { _IPaginationMeta } from '../interfaces/responses.interface';
 import { ApiResponse } from './api.response';
 
-class PaginatedResponse<T> extends ApiResponse<T[]> {
+class PaginatedResponse<T> extends ApiResponse<{
+  items: T[];
+  meta: _IPaginationMeta;
+}> {
   constructor(
     statusCode: number,
-    message: string,
-    data: T[],
-    public meta: _IPaginationMeta,
+    items: T[],
+    meta: _IPaginationMeta,
+    message?: string,
+    error?: string,
   ) {
-    super(statusCode, message, data);
+    super(statusCode, { items, meta }, message, error);
   }
 }
 

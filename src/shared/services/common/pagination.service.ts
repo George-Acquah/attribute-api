@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { _IPaginationMeta } from 'src/shared/interfaces/responses.interface';
 import { PaginatedResponse } from 'src/shared/res/paginated.response';
 
@@ -65,10 +69,11 @@ export class PaginationService {
       };
 
       return new PaginatedResponse<TModel>(
-        200,
-        args.message ?? 'Data fetched successfully',
+        HttpStatus.OK,
         data,
         meta,
+        args.message ?? 'Data fetched successfully',
+        null,
       );
     } catch (error) {
       console.error('PaginationService Error:', error);

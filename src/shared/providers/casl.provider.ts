@@ -27,6 +27,7 @@ export class CaslAbilityFactory {
     can(Action.Create, 'Campaign');
 
     can(Action.Update, 'Campaign', 'all', { ownerId: user.id });
+    can(Action.Delete, 'Campaign', 'all', { ownerId: user.id });
 
     return build({
       detectSubjectType: (item) =>

@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CampaignService } from './campaign.service';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
@@ -17,13 +18,34 @@ import { CreateCampaignDto } from './dtos/create-campaign.dto';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { PaginationParams } from 'src/shared/dtos/pagination.dto';
 import { FirebaseAuthGuard } from 'src/shared/guards/firebase-auth.guard';
+import { UpdateCampaignDto } from './dtos/update-campaign.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiCreatedResponseWithModel,
+  ApiGlobalResponses,
+  ApiOkResponseWithModel,
+  ApiPaginatedResponse,
+} from 'src/shared/decorators/swagger.decorator';
+import { CampaignDto } from './dtos/get-campaign.dto';
+import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
+import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
+import { CacheService } from 'src/shared/services/redis/cache.service';
+import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 
-@Controller('campaigns')
+const CONTROLLER_PATH = 'campaigns';
+@ApiBearerAuth()
+@UseInterceptors(CacheInterceptor)
+@Controller(CONTROLLER_PATH)
+@ApiGlobalResponses()
 @UseGuards(FirebaseAuthGuard, PoliciesGuard)
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(
+    private readonly campaignService: CampaignService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Post('create')
+  @ApiCreatedResponseWithModel(CampaignDto)
   @CheckPolicies((ability) => ability.can(Action.Create, 'Campaign'))
   async create(
     @CurrentUser('id') userId: string,
@@ -35,14 +57,20 @@ export class CampaignController {
   }
 
   @Get('all')
+  @Cacheable(
+    (_, query) => buildPaginatedListCacheKey(CONTROLLER_PATH, query),
+    60,
+  )
+  @ApiPaginatedResponse(CampaignDto)
   @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
   async getAll(@Query() pagination: PaginationParams) {
     const result = await this.campaignService.findAllCampaigns(pagination);
-
     return result;
   }
 
   @Get(':id')
+  @Cacheable((_, params) => `${CONTROLLER_PATH}:${params.id}`, 60)
+  @ApiOkResponseWithModel(CampaignDto)
   @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
   async getOne(@Param('id') id: string) {
     const result = await this.campaignService.findOneCampaign(id);
@@ -50,11 +78,12 @@ export class CampaignController {
   }
 
   @Patch(':id')
-  @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign'))
+  @ApiOkResponseWithModel(CampaignDto)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign', 'all'))
   async update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
-    @Body() dto: CreateCampaignDto,
+    @Body() dto: UpdateCampaignDto,
   ) {
     const result = await this.campaignService.updateCampaign(id, dto, userId);
 

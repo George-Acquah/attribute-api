@@ -14,12 +14,16 @@ import { BearerToken } from 'src/shared/decorators/bearer-token.decorator';
 import { FirebaseAuthGuard } from 'src/shared/guards/firebase-auth.guard';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Cookies } from 'src/shared/decorators/cookies.decorator';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiGlobalResponses } from 'src/shared/decorators/swagger.decorator';
 
 @Controller('auth')
+@ApiGlobalResponses()
 export class AuthController {
   private logger = new Logger(AuthController.name);
   constructor(private readonly authService: AuthService) {}
 
+  @ApiBearerAuth()
   @Post('login')
   async login(
     @BearerToken('Bearer') token: string,
@@ -57,9 +61,10 @@ export class AuthController {
   @Post('logout')
   async logout(
     @Cookies('session') token: string,
+    @CurrentUser('id') id: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.revokeTokens(token);
+    const result = await this.authService.revokeTokens(token, id);
     res.clearCookie('session');
 
     res.status(result.statusCode || 200);

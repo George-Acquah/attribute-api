@@ -74,7 +74,11 @@ export class CampaignService {
     }
   }
 
-  async updateCampaign(id: string, dto: _ICreateCampaign, userId: string) {
+  async updateCampaign(
+    id: string,
+    dto: Partial<_ICreateCampaign>,
+    userId: string,
+  ) {
     try {
       const campaign = await this.prisma.campaign.findUnique({ where: { id } });
 
