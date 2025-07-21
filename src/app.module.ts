@@ -7,6 +7,7 @@ import { RedisModule } from './shared/modules/redis.module';
 import { RedisController } from './routes/redis/redis.controller';
 import { CampaignModule } from './routes/campaign/campaign.module';
 import { UsersModule } from './routes/users/users.module';
+import { AttributesModule } from './routes/attributes/attributes.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UsersModule } from './routes/users/users.module';
     AuthModule,
     CampaignModule,
     UsersModule,
+    AttributesModule,
   ],
   providers: [],
   controllers: [RedisController],

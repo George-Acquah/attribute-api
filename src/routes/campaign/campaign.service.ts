@@ -12,6 +12,7 @@ import {
 } from 'src/shared/res/api.response';
 import { PaginationService } from 'src/shared/services/common/pagination.service';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
+import { RedisService } from 'src/shared/services/redis/redis.service';
 
 @Injectable()
 export class CampaignService {
@@ -19,11 +20,13 @@ export class CampaignService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
+    private readonly redis: RedisService,
   ) {}
 
   async createCampaign(
     dto: _ICreateCampaign,
     userId: string,
+    path: string,
   ): Promise<ApiResponse<Campaign>> {
     try {
       const result = await this.prisma.campaign.create({
@@ -32,6 +35,8 @@ export class CampaignService {
           ownerId: userId,
         },
       });
+
+      await this.redis.delByPattern(`${path}:list:*`);
 
       return new CreatedResponse(
         result,
@@ -52,7 +57,7 @@ export class CampaignService {
       Prisma.CampaignOrderByWithRelationInput
     >(this.prisma.campaign, {
       ...dto,
-      searchField: 'name',
+      searchFields: ['name'],
       searchValue: dto.query,
       // where: { isActive: true },
       include: { owner: true },
@@ -78,6 +83,7 @@ export class CampaignService {
     id: string,
     dto: Partial<_ICreateCampaign>,
     userId: string,
+    path: string,
   ) {
     try {
       const campaign = await this.prisma.campaign.findUnique({ where: { id } });
@@ -92,6 +98,8 @@ export class CampaignService {
         data: dto,
       });
 
+      await this.redis.del(`${path}:list:*`);
+
       return new OkResponse(result, 'Campaign updated successfully');
     } catch (error) {
       this.logger.error(error);
@@ -99,7 +107,7 @@ export class CampaignService {
     }
   }
 
-  async deleteCampaign(id: string, userId: string) {
+  async deleteCampaign(id: string, userId: string, path: string) {
     try {
       const campaign = await this.prisma.campaign.findUnique({ where: { id } });
 
@@ -111,6 +119,8 @@ export class CampaignService {
       const result = await this.prisma.campaign.delete({
         where: { id },
       });
+
+      await this.redis.delByPattern(`${path}:*`);
 
       return new OkResponse(result, 'Campaign deleted successfully');
     } catch (error) {

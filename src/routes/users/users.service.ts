@@ -6,15 +6,17 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { FirebaseAdminService } from 'src/shared/services/firebase/firebase-admin.service';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
+import { PaginationService } from 'src/shared/services/common/pagination.service';
+import { Prisma, User } from '@prisma/client';
+import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   constructor(
     private prisma: PrismaService,
-    private readonly firebaseService: FirebaseAdminService,
+    private readonly paginationService: PaginationService,
   ) {}
   async findByUid(uid: string) {
     try {
@@ -35,11 +37,23 @@ export class UsersService {
     }
   }
   create(createUserDto: CreateUserDto) {
+    void createUserDto;
     return 'This action adds a new user';
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll(dto: _IPaginationParams) {
+    return await this.paginationService.paginateAndFilter<
+      User,
+      Prisma.UserWhereInput,
+      Prisma.UserInclude,
+      Prisma.UserOrderByWithRelationInput
+    >(this.prisma.user, {
+      ...dto,
+      searchFields: ['email', 'name'],
+      searchValue: dto.query,
+      // where: { isActive: true },
+      include: { campaigns: true },
+    });
   }
 
   findOne(id: number) {
@@ -47,6 +61,7 @@ export class UsersService {
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
+    void updateUserDto;
     return `This action updates a #${id} user`;
   }
 

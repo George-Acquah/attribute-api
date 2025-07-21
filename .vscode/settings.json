@@ -1,6 +1,6 @@
 {
-    "files.eol": "\n",
-    "typelens.exclude": [
-        "**/Dockerfile"
-    ]
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "files.eol": "\n",
+  "typelens.exclude": ["**/Dockerfile"]
 }

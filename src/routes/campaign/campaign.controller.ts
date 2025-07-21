@@ -51,7 +51,11 @@ export class CampaignController {
     @CurrentUser('id') userId: string,
     @Body() dto: CreateCampaignDto,
   ) {
-    const result = await this.campaignService.createCampaign(dto, userId);
+    const result = await this.campaignService.createCampaign(
+      dto,
+      userId,
+      CONTROLLER_PATH,
+    );
 
     return result;
   }
@@ -85,7 +89,12 @@ export class CampaignController {
     @Param('id') id: string,
     @Body() dto: UpdateCampaignDto,
   ) {
-    const result = await this.campaignService.updateCampaign(id, dto, userId);
+    const result = await this.campaignService.updateCampaign(
+      id,
+      dto,
+      userId,
+      CONTROLLER_PATH,
+    );
 
     return result;
   }
@@ -93,7 +102,11 @@ export class CampaignController {
   @Delete(':id')
   @CheckPolicies((ability) => ability.can(Action.Delete, 'Campaign'))
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const result = await this.campaignService.deleteCampaign(id, userId);
+    const result = await this.campaignService.deleteCampaign(
+      id,
+      userId,
+      CONTROLLER_PATH,
+    );
 
     return result;
   }
