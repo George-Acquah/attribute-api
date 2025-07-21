@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Campaign, Code, Prisma } from '@prisma/client';
+import { nanoid } from 'nanoid';
 import { _ICreateCampaign } from 'src/shared/interfaces/campaign.interface';
 import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
 import {
@@ -13,7 +14,7 @@ import {
 import { PaginationService } from 'src/shared/services/common/pagination.service';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 import { RedisService } from 'src/shared/services/redis/redis.service';
-import { generateUniqueCode } from 'src/shared/utils/codes';
+import { generateQrDataUrl } from 'src/shared/utils/codes';
 
 @Injectable()
 export class CampaignService {
@@ -39,14 +40,18 @@ export class CampaignService {
       });
 
       const codes = await Promise.all(
-        Array.from({ length: dto.numberOfCodes ?? 1 }).map(() =>
-          this.prisma.code.create({
+        Array.from({ length: dto.numberOfCodes ?? 1 }).map(async () => {
+          const codeValue = nanoid(8);
+          const qrUrl = await generateQrDataUrl(codeValue);
+          return this.prisma.code.create({
             data: {
               campaignId: campaign.id,
-              code: generateUniqueCode(),
+              code: codeValue,
+
+              qrUrl,
             },
-          }),
-        ),
+          });
+        }),
       );
 
       await this.redis.delByPattern(`${path}:list:*`);

@@ -10,6 +10,7 @@ import { UsersModule } from './routes/users/users.module';
 import { AttributesModule } from './routes/attributes/attributes.module';
 import { CodesModule } from './routes/codes/codes.module';
 import { InteractionModule } from './routes/interaction/interaction.module';
+import { ConversionModule } from './routes/conversion/conversion.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { InteractionModule } from './routes/interaction/interaction.module';
     AttributesModule,
     CodesModule,
     InteractionModule,
+    ConversionModule,
   ],
   providers: [],
   controllers: [RedisController],
