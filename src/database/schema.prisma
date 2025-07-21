@@ -95,7 +95,7 @@ model Interaction {
   codeId      String
   type        InteractionType
   metadata    Json?
-  fingerprint String? // Anonymous session identifier
+  fingerprint String?
   timestamp   DateTime        @default(now()) @map("timestamp") @db.Timestamptz(6)
   code        Code            @relation(fields: [codeId], references: [id])
   user        User?           @relation(fields: [userId], references: [id])
