@@ -45,10 +45,10 @@ export class FirebaseAuthGuard implements CanActivate {
       let user: _ISafeUser;
       if (userData) {
         user = userData;
-        this.logger.log(`Loaded user role from Redis: ${user.id}`);
+        this.logger.log(`Loaded user role from Redis: `, userData);
       } else {
         // 3. Fallback to DB
-        user = await this.userService.findByUid(decoded.email);
+        user = await this.userService.findByUid(uid);
         if (!user) {
           throw new UnauthorizedException('User not found');
         }
@@ -61,8 +61,8 @@ export class FirebaseAuthGuard implements CanActivate {
       request.user = {
         id: user.id,
         // uid,
+        roles: user.roles,
         email: user.email,
-        // role: user.role,
       };
 
       return true;

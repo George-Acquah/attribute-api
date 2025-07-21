@@ -24,27 +24,27 @@ async function bootstrap() {
     app.useGlobalInterceptors(new ApiResponseInterceptor());
     app.use(cookieParser());
 
-        app.enableCors({
-          origin: isProduction
-            ? [
-                'https://attribute-kappa.vercel.app',
-                'https://attribute-api1.onrender.com',
-                `http://localhost:${port}`,
-              ]
-            : [
-                `http://localhost:${port}`,
-                `http://localhost:3000`,
-                'https://attribute-kappa.vercel.app',
-              ],
-          credentials: true,
-          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-          allowedHeaders: [
-            'Content-Type',
-            'Authorization',
-            'X-Requested-With',
-            'Accept',
+    app.enableCors({
+      origin: isProduction
+        ? [
+            'https://attribute-kappa.vercel.app',
+            'https://attribute-api1.onrender.com',
+            `http://localhost:${port}`,
+          ]
+        : [
+            `http://localhost:${port}`,
+            `http://localhost:3000`,
+            'https://attribute-kappa.vercel.app',
           ],
-        });
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+      ],
+    });
 
     // Swagger setup
     const swaggerConfig = new DocumentBuilder()
@@ -71,11 +71,13 @@ async function bootstrap() {
       customSiteTitle: 'Firebase Test API Docs',
     });
 
-    app.useGlobalPipes(new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true
-    }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
 
     await app.listen(port, '0.0.0.0', () => {
       console.log(`Listening at http://0.0.0.0:${port}`);

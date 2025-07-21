@@ -20,15 +20,29 @@ export class UsersService {
   ) {}
   async findByUid(uid: string) {
     try {
-      const user = await this.prisma.user.findUnique({
-        where: { email: uid },
+      const rawUser = await this.prisma.user.findUnique({
+        where: { uid },
         select: {
           id: true,
           email: true,
+          roles: {
+            select: {
+              role: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
         },
       });
 
-      if (!user) throw new NotFoundException('User does not exist');
+      if (!rawUser) throw new NotFoundException('User does not exist');
+
+      const user = {
+        ...rawUser,
+        roles: rawUser.roles.map((r) => r.role.name),
+      };
 
       return user;
     } catch (error) {

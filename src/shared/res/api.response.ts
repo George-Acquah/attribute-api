@@ -8,13 +8,12 @@ class ApiResponse<T> {
     public message?: string,
 
     public error?: string,
-
   ) {}
 }
 
 class OkResponse<T> extends ApiResponse<T> {
   constructor(data: T, message = 'OK') {
-    super(HttpStatus.OK, data,  message, null);
+    super(HttpStatus.OK, data, message, null);
   }
 }
 

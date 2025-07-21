@@ -9,16 +9,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum InteractionType {
+  SCAN
+  PAGE_VIEW
+  SIGNUP
+  PURCHASE
+  CUSTOM
+}
+
+enum ConversionType {
+  SIGNUP
+  PURCHASE
+  DOWNLOAD
+  BOOKING
+  CUSTOM
+}
+
 model User {
   id           String        @id @default(cuid())
+  uid          String        @unique
   email        String        @unique
   name         String?
   img          String?
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(6)
   campaigns    Campaign[]    @relation("OwnerCampaigns")
   interactions Interaction[]
   roles        UserRole[]
+  conversions  Conversion[]
 
   @@index([email])
   @@map("users")
@@ -44,11 +63,14 @@ model UserRole {
 }
 
 model Campaign {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
+  type      String
   name      String
+  channel   String    @default("QR")
   ownerId   String
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  owner     User     @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  owner     User      @relation("OwnerCampaigns", fields: [ownerId], references: [id])
   codes     Code[]
 
   @@map("campaigns")
@@ -58,7 +80,9 @@ model Code {
   id           String        @id @default(cuid())
   code         String        @unique
   campaignId   String
+  qrUrl        String?
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(6)
   campaign     Campaign      @relation(fields: [campaignId], references: [id])
   interactions Interaction[]
 
@@ -66,14 +90,39 @@ model Code {
 }
 
 model Interaction {
-  id        String   @id @default(cuid())
-  userId    String
-  codeId    String
-  type      String
-  metadata  Json?
-  timestamp DateTime @default(now()) @map("timestamp") @db.Timestamptz(6)
-  code      Code     @relation(fields: [codeId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  id          String          @id @default(cuid())
+  userId      String?
+  codeId      String
+  type        InteractionType
+  metadata    Json?
+  fingerprint String? // Anonymous session identifier
+  timestamp   DateTime        @default(now()) @map("timestamp") @db.Timestamptz(6)
+  code        Code            @relation(fields: [codeId], references: [id])
+  user        User?           @relation(fields: [userId], references: [id])
+
+  conversionLinks ConversionInteraction[]
 
   @@map("interactions")
+}
+
+model Conversion {
+  id           String                  @id @default(cuid())
+  userId       String?
+  type         ConversionType
+  value        Float?
+  timestamp    DateTime                @default(now()) @db.Timestamptz(6)
+  user         User?                   @relation(fields: [userId], references: [id])
+  interactions ConversionInteraction[]
+
+  @@map("conversions")
+}
+
+model ConversionInteraction {
+  conversionId  String
+  interactionId String
+  conversion    Conversion  @relation(fields: [conversionId], references: [id])
+  interaction   Interaction @relation(fields: [interactionId], references: [id])
+
+  @@id([conversionId, interactionId])
+  @@map("conversion_interactions")
 }

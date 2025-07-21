@@ -8,6 +8,8 @@ import { RedisController } from './routes/redis/redis.controller';
 import { CampaignModule } from './routes/campaign/campaign.module';
 import { UsersModule } from './routes/users/users.module';
 import { AttributesModule } from './routes/attributes/attributes.module';
+import { CodesModule } from './routes/codes/codes.module';
+import { InteractionModule } from './routes/interaction/interaction.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { AttributesModule } from './routes/attributes/attributes.module';
     CampaignModule,
     UsersModule,
     AttributesModule,
+    CodesModule,
+    InteractionModule,
   ],
   providers: [],
   controllers: [RedisController],

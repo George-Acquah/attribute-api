@@ -1,5 +1,6 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Delete, Get, HttpStatus, Res } from '@nestjs/common';
 import { Response } from 'express';
+import { OkResponse } from 'src/shared/res/api.response';
 import { RedisService } from 'src/shared/services/redis/redis.service';
 
 @Controller('redis')
@@ -13,5 +14,15 @@ export class RedisController {
     return res
       .status(isHealthy ? HttpStatus.OK : HttpStatus.BAD_REQUEST)
       .json({ redisNew: isHealthy ? 'healthy new' : 'unhealthy' });
+  }
+
+  @Delete('cache')
+  async deleteCache() {
+    const result =
+      process.env.NODE_ENV === 'development'
+        ? await this.redisService.flushAll()
+        : 'This action is only available in development mode';
+
+    return new OkResponse(result);
   }
 }

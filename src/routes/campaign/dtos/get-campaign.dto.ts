@@ -7,6 +7,9 @@ export const CampaignDto = generateDtoClassFromType<Campaign>(
     name: '',
     createdAt: new Date(),
     ownerId: '',
+    type: '',
+    channel: '',
+    deletedAt: new Date(),
   },
   'CampaignsDto',
 );

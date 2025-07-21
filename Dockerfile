@@ -26,6 +26,9 @@ COPY --chown=node:node . .
 # Generate Prisma client
 RUN pnpm run prisma:generate && chown -R node:node node_modules/.prisma
 
+COPY wait-for.sh ./
+RUN chmod +x wait-for.sh
+
 # Use non-root user for development
 USER node
 

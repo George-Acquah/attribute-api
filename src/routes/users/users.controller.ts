@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -24,10 +25,13 @@ import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { Action } from 'src/shared/enums/casl.enums';
 import { UserDto } from './dto/get-user.dto';
+import { FirebaseAuthGuard } from 'src/shared/guards/firebase-auth.guard';
+import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 
 const CONTROLLER_PATH = 'users';
 @ApiBearerAuth()
 @UseInterceptors(CacheInterceptor)
+@UseGuards(FirebaseAuthGuard, PoliciesGuard)
 @Controller(CONTROLLER_PATH)
 @ApiGlobalResponses()
 export class UsersController {

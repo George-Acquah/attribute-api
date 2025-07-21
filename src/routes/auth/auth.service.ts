@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { User } from '@prisma/client';
 import {
@@ -36,17 +33,37 @@ export class AuthService {
         return new BadRequestResponse('Invalid token');
       }
 
+      const defaultRole = await this.prisma.role.findUnique({
+        where: { name: 'user' },
+      });
+
+      if (!defaultRole) return new BadRequestResponse('Default role "user" not found in the roles table');
+
       const user = await this.prisma.user.upsert({
         where: { email: decodedToken.email },
         create: {
           email: decodedToken.email,
+          uid: decodedToken.uid,
           name: decodedToken.name || '',
           img: decodedToken.picture,
+          roles: {
+            create: [
+              {
+                role: {
+                  connect: { id: defaultRole.id },
+                },
+              },
+            ],
+          },
           // uid: decodedToken.uid,
         },
         update: {
           name: decodedToken.name || '',
           img: decodedToken.picture,
+        },
+
+        include: {
+          roles: { include: { role: true } },
         },
       });
 
@@ -64,12 +81,26 @@ export class AuthService {
       );
     } catch (error) {
       this.logger.error('authenticatedUser error:', error);
-        if (error instanceof Error && 'code' in error) {
-          const firebaseError = error as { code: string; message: string };
-          if (firebaseError.code.startsWith('auth/')) {
-            return new ForbiddenResponse(firebaseError.message);
-          }
-        }
+
+      if (
+        error?.errorInfo?.code === 'auth/id-token-expired' ||
+        (error instanceof Error &&
+          'code' in error &&
+          (error as any).code === 'auth/id-token-expired')
+      ) {
+        return new ForbiddenResponse(
+          'Your session has expired. Please log in again.',
+        );
+      }
+
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as any).code.startsWith('auth/')
+      ) {
+        return new ForbiddenResponse('Make sure you passed the correct JWT.');
+      }
+
       return new InternalServerErrorResponse();
     }
   }

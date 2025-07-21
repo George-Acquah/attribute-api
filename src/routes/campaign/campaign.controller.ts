@@ -29,7 +29,6 @@ import {
 import { CampaignDto } from './dtos/get-campaign.dto';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
-import { CacheService } from 'src/shared/services/redis/cache.service';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 
 const CONTROLLER_PATH = 'campaigns';
@@ -39,10 +38,7 @@ const CONTROLLER_PATH = 'campaigns';
 @ApiGlobalResponses()
 @UseGuards(FirebaseAuthGuard, PoliciesGuard)
 export class CampaignController {
-  constructor(
-    private readonly campaignService: CampaignService,
-    private readonly cache: CacheService,
-  ) {}
+  constructor(private readonly campaignService: CampaignService) {}
 
   @Post('create')
   @ApiCreatedResponseWithModel(CampaignDto)

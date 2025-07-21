@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Campaign, Prisma } from '@prisma/client';
+import { Campaign, Code, Prisma } from '@prisma/client';
 import { _ICreateCampaign } from 'src/shared/interfaces/campaign.interface';
 import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
 import {
@@ -13,6 +13,7 @@ import {
 import { PaginationService } from 'src/shared/services/common/pagination.service';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 import { RedisService } from 'src/shared/services/redis/redis.service';
+import { generateUniqueCode } from 'src/shared/utils/codes';
 
 @Injectable()
 export class CampaignService {
@@ -27,19 +28,31 @@ export class CampaignService {
     dto: _ICreateCampaign,
     userId: string,
     path: string,
-  ): Promise<ApiResponse<Campaign>> {
+  ): Promise<ApiResponse<Campaign & { codes: Code[] }>> {
     try {
-      const result = await this.prisma.campaign.create({
+      const campaign = await this.prisma.campaign.create({
         data: {
           name: dto.name,
+          type: dto.type,
           ownerId: userId,
         },
       });
 
+      const codes = await Promise.all(
+        Array.from({ length: dto.numberOfCodes ?? 1 }).map(() =>
+          this.prisma.code.create({
+            data: {
+              campaignId: campaign.id,
+              code: generateUniqueCode(),
+            },
+          }),
+        ),
+      );
+
       await this.redis.delByPattern(`${path}:list:*`);
 
       return new CreatedResponse(
-        result,
+        { ...campaign, codes },
         'Your campaign has been created successfully',
       );
     } catch (error) {
