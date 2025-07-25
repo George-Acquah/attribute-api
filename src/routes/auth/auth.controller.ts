@@ -15,7 +15,9 @@ import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Cookies } from 'src/shared/decorators/cookies.decorator';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiGlobalResponses } from 'src/shared/decorators/swagger.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 @ApiGlobalResponses()
 export class AuthController {

@@ -27,8 +27,10 @@ import { Action } from 'src/shared/enums/casl.enums';
 import { UserDto } from './dto/get-user.dto';
 import { FirebaseAuthGuard } from 'src/shared/guards/firebase-auth.guard';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
+import { ApiTags } from '@nestjs/swagger';
 
 const CONTROLLER_PATH = 'users';
+@ApiTags('Users')
 @ApiBearerAuth()
 @UseInterceptors(CacheInterceptor)
 @UseGuards(FirebaseAuthGuard, PoliciesGuard)

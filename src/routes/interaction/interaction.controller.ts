@@ -5,7 +5,9 @@ import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { LocalAuthGuard } from 'src/shared/guards/local-auth.guard';
 import { Fingerprint } from 'src/shared/decorators/fingerprints.decorator';
 import { _IFingerprintWithMeta } from 'src/shared/interfaces/interactions.interface';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Interaction')
 @ApiGlobalResponses()
 @Controller('interaction')
 export class InteractionController {

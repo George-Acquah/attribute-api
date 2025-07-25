@@ -31,8 +31,10 @@ import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { CodeDto } from '../codes/dto/get-code.dto';
+import { ApiTags } from '@nestjs/swagger';
 
 const CONTROLLER_PATH = 'campaigns';
+@ApiTags('Campaigns')
 @ApiBearerAuth()
 @UseInterceptors(CacheInterceptor)
 @Controller(CONTROLLER_PATH)

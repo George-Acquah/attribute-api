@@ -28,8 +28,10 @@ import { PaginationParams } from 'src/shared/dtos/pagination.dto';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { CodeDto } from './dto/get-code.dto';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
+import { ApiTags } from '@nestjs/swagger';
 
 const CONTROLLER_PATH = 'codes';
+@ApiTags('Codes')
 @UseGuards(FirebaseAuthGuard, PoliciesGuard)
 @UseInterceptors(CacheInterceptor)
 @Controller(CONTROLLER_PATH)

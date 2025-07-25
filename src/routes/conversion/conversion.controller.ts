@@ -4,7 +4,9 @@ import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { CreateConversionDto } from './dtos/create-conversion.dto';
 import { instanceToPlain } from 'class-transformer';
 import { _ICreateConversion } from 'src/shared/interfaces/conversion.interface';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Conversion')
 @Controller('conversion')
 export class ConversionController {
   constructor(private readonly conversionService: ConversionService) {}

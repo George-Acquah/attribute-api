@@ -2,7 +2,9 @@ import { Controller, Delete, Get, HttpStatus, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { OkResponse } from 'src/shared/res/api.response';
 import { RedisService } from 'src/shared/services/redis/redis.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Redis')
 @Controller('redis')
 export class RedisController {
   constructor(private readonly redisService: RedisService) {}

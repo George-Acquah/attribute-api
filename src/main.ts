@@ -48,16 +48,27 @@ async function bootstrap() {
 
     // Swagger setup
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Firebase Test API')
-      .setDescription('API documentation for Firebase Test')
+      .setTitle('Attribution API')
+      .setDescription('API documentation for Attribution')
       .setVersion('1.0')
       .addBearerAuth()
-      .setContact('Firebase Test', '#', 'support@firebase-test.com')
+      .setContact('Attribution', '#', 'support@firebase-test.com')
       .setLicense('MIT', 'https://opensource.org/licenses/MIT')
       .setTermsOfService('#')
       .addServer('http://localhost:' + port, 'Local development server')
       .addServer('https://attribute-api1.onrender.com', 'Production server')
       .addTag('Auth', 'Authentication and user management')
+      .addTag('Users', 'User profiles and roles')
+      .addTag('Campaigns', 'Campaign creation, targeting, and management')
+      .addTag('Codes', 'Promo or QR code generation and tracking')
+      .addTag('Interaction', 'Track user interactions like scans or page views')
+      .addTag(
+        'Conversion',
+        'Capture conversion events (signups, purchases, etc.)',
+      )
+      .addTag('Analytics', 'Reports, KPIs, and insights')
+      .addTag('Attribution', 'Attribution logic and credit assignment')
+      .addTag('Redis', 'Session, cache, or temp storage operations')
       .build();
 
     const document = () => SwaggerModule.createDocument(app, swaggerConfig);
@@ -68,7 +79,7 @@ async function bootstrap() {
         tryItOutEnabled: true,
         withCredential: true,
       },
-      customSiteTitle: 'Firebase Test API Docs',
+      customSiteTitle: 'Attribution API Docs',
     });
 
     app.useGlobalPipes(
