@@ -9,9 +9,10 @@ export const Fingerprint = createParamDecorator((_, context) => {
     userAgent: req.headers['user-agent'],
     acceptLanguage: req.headers['accept-language'],
     referer: req.headers['referer'],
-
     timestamp: new Date().toISOString(),
   };
+
+  console.log('METADATA FROM USER: ', metadata);
   const fingerprint: string = req.cookies['visitor_id'];
 
   return {

@@ -6,7 +6,7 @@ export class CreateCampaignDto {
   name: string;
 
   @IsString()
-  type: string;
+  medium: string;
 
   @IsOptional()
   @IsString()

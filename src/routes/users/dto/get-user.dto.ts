@@ -13,6 +13,7 @@ export const UserDto = generateDtoClassFromType<User>(
     updatedAt: new Date(),
     uid: '',
     deletedAt: new Date(),
+    phone: '',
   },
   'UsersDto',
 );

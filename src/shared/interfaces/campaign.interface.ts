@@ -1,6 +1,6 @@
 export interface _ICreateCampaign {
   name: string;
-  type: string;
+  medium: string;
 
   channel?: string;
   numberOfCodes?: number;

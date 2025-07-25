@@ -5,6 +5,7 @@ import { _ICreateCampaign } from 'src/shared/interfaces/campaign.interface';
 import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
 import {
   ApiResponse,
+  BadRequestResponse,
   CreatedResponse,
   ForbiddenResponse,
   InternalServerErrorResponse,
@@ -34,7 +35,7 @@ export class CampaignService {
       const campaign = await this.prisma.campaign.create({
         data: {
           name: dto.name,
-          type: dto.type,
+          medium: dto.medium,
           ownerId: userId,
         },
       });
@@ -55,6 +56,7 @@ export class CampaignService {
       );
 
       await this.redis.delByPattern(`${path}:list:*`);
+      await this.redis.delByPattern(`${path}:analytics:*`);
 
       return new CreatedResponse(
         { ...campaign, codes },
@@ -144,6 +146,115 @@ export class CampaignService {
     } catch (error) {
       this.logger.error(error);
       return new InternalServerErrorResponse();
+    }
+  }
+
+  async getAnalytics(campaignId: string) {
+    try {
+      //TOtal Number of people that performed an action divided interacted
+      // Validate campaignId
+      if (!campaignId || typeof campaignId !== 'string')
+        return new BadRequestResponse('Invalid campaign ID');
+
+      const codes = await this.prisma.code.findMany({
+        where: {
+          campaignId,
+          deletedAt: null,
+        },
+        include: {
+          interactions: {
+            include: {
+              conversionLinks: {
+                include: {
+                  conversion: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Handle case where no codes are found
+      if (!codes.length)
+        return new OkResponse(
+          {
+            campaignId,
+            totalInteractions: 0,
+            totalUniqueInteractions: 0,
+            totalConversions: 0,
+            conversionRate: 0,
+            codes: [],
+            topCodes: [],
+          },
+          'No codes found for this campaign',
+        );
+
+      let totalInteractions = 0;
+      let totalUniqueInteractions = 0;
+      let totalConversions = 0;
+
+      const codeStats = codes.map((code) => {
+        try {
+          const rawInteractions = code.interactions ?? [];
+
+          const interactions = rawInteractions.length;
+
+          const uniqueUsers = new Set(
+            rawInteractions
+              .map((i) => i.userId || i.fingerprint)
+              .filter(Boolean),
+          );
+          const uniqueInteractions = uniqueUsers.size;
+
+          const conversions = new Set(
+            rawInteractions.flatMap((i) =>
+              i.conversionLinks?.map((cl) => cl.conversion?.id).filter(Boolean),
+            ) ?? [],
+          ).size;
+
+          totalInteractions += interactions;
+          totalUniqueInteractions += uniqueInteractions;
+          totalConversions += conversions;
+
+          return {
+            code: code.code,
+            interactions,
+            uniqueInteractions,
+            conversions,
+            conversionRate: uniqueInteractions
+              ? conversions / uniqueInteractions
+              : 0,
+          };
+        } catch (error) {
+          this.logger.error(`Error processing code ${code.code}:`, error);
+          return {
+            code: code.code,
+            interactions: 0,
+            conversions: 0,
+            conversionRate: 0,
+          };
+        }
+      });
+
+      const topCodes = [...codeStats]
+        .sort((a, b) => b.conversions - a.conversions)
+        .slice(0, 3);
+
+      return new OkResponse({
+        campaignId,
+        totalInteractions,
+        totalUniqueInteractions,
+        totalConversions,
+        conversionRate:
+          totalUniqueInteractions > 0
+            ? totalConversions / totalUniqueInteractions
+            : 0,
+        codes: codeStats,
+        topCodes,
+      });
+    } catch (error) {
+      this.logger.error('Error in getAnalytics:', error);
+      return new InternalServerErrorResponse('Failed to fetch analytics');
     }
   }
 }

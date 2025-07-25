@@ -7,10 +7,11 @@ import { RedisModule } from './shared/modules/redis.module';
 import { RedisController } from './routes/redis/redis.controller';
 import { CampaignModule } from './routes/campaign/campaign.module';
 import { UsersModule } from './routes/users/users.module';
-import { AttributesModule } from './routes/attributes/attributes.module';
 import { CodesModule } from './routes/codes/codes.module';
 import { InteractionModule } from './routes/interaction/interaction.module';
 import { ConversionModule } from './routes/conversion/conversion.module';
+import { AttributionModule } from './routes/attribution/attribution.module';
+import { AnalyticsModule } from './routes/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -21,10 +22,11 @@ import { ConversionModule } from './routes/conversion/conversion.module';
     AuthModule,
     CampaignModule,
     UsersModule,
-    AttributesModule,
     CodesModule,
     InteractionModule,
     ConversionModule,
+    AttributionModule,
+    AnalyticsModule,
   ],
   providers: [],
   controllers: [RedisController],

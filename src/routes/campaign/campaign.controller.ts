@@ -30,6 +30,7 @@ import { CampaignDto } from './dtos/get-campaign.dto';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
+import { CodeDto } from '../codes/dto/get-code.dto';
 
 const CONTROLLER_PATH = 'campaigns';
 @ApiBearerAuth()
@@ -105,5 +106,13 @@ export class CampaignController {
     );
 
     return result;
+  }
+
+  @Get(':id/analytics')
+  @Cacheable((_, params) => `${CONTROLLER_PATH}:analytics:${params.id}`, 60) // 1 minutes cache
+  @ApiOkResponseWithModel(CodeDto)
+  @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
+  async getAnalytics(@Param('id') campaignId: string) {
+    return this.campaignService.getAnalytics(campaignId);
   }
 }

@@ -28,7 +28,8 @@ enum ConversionType {
 model User {
   id           String        @id @default(cuid())
   uid          String        @unique
-  email        String        @unique
+  email        String?       @unique
+  phone        String?       @map("phone_number")
   name         String?
   img          String?
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -62,13 +63,20 @@ model UserRole {
   @@map("user_roles")
 }
 
+//Report - Look out for location as well
+
 model Campaign {
   id        String    @id @default(cuid())
-  type      String
   name      String
+  descrpition String? @default("")
+  budget Float?  @default(0)
+  target  Json?
+  medium        String     @map("type")
+  actions String[]  @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
   channel   String    @default("QR")
   ownerId   String
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  endDate DateTime  @default(now()) @map("end_date") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
   owner     User      @relation("OwnerCampaigns", fields: [ownerId], references: [id])
   codes     Code[]
@@ -94,6 +102,8 @@ model Interaction {
   userId      String?
   codeId      String
   type        InteractionType
+  phoneNumber String?
+  email Json? 
   metadata    Json?
   fingerprint String?
   timestamp   DateTime        @default(now()) @map("timestamp") @db.Timestamptz(6)
@@ -126,3 +136,5 @@ model ConversionInteraction {
   @@id([conversionId, interactionId])
   @@map("conversion_interactions")
 }
+
+
