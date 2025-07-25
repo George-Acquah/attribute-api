@@ -3,5 +3,6 @@ export interface _ICreateCampaign {
   medium: string;
 
   channel?: string;
+  budget?: number;
   numberOfCodes?: number;
 }

@@ -36,6 +36,7 @@ export class CampaignService {
         data: {
           name: dto.name,
           medium: dto.medium,
+          budget: dto.budget,
           ownerId: userId,
         },
       });

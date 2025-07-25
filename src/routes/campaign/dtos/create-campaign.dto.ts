@@ -14,6 +14,11 @@ export class CreateCampaignDto {
 
   @IsOptional()
   @Type(() => Number)
+  @Min(1)
+  budget?: number;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   numberOfCodes?: number;
