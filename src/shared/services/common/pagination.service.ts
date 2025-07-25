@@ -22,7 +22,7 @@ export class PaginationService {
     args: {
       page?: number;
       limit?: number;
-      searchField?: keyof TWhereInput & string;
+      searchFields?: (keyof TWhereInput & string)[];
       searchValue?: string;
       where?: TWhereInput;
       include?: TInclude;
@@ -37,13 +37,17 @@ export class PaginationService {
 
       let where = args.where;
 
-      if (args.searchField && args.searchValue) {
-        where = {
-          ...args.where,
-          [args.searchField]: {
+      if (args.searchFields && args.searchFields.length && args.searchValue) {
+        const searchConditions = args.searchFields.map((field) => ({
+          [field]: {
             contains: args.searchValue,
             mode: 'insensitive',
           },
+        }));
+
+        where = {
+          ...args.where,
+          OR: searchConditions,
         } as unknown as TWhereInput;
       }
 

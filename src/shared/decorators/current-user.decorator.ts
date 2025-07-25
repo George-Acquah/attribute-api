@@ -7,6 +7,7 @@ export const CurrentUser = createParamDecorator(
     ctx: ExecutionContext,
   ): _ISafeUser | _ISafeUser[keyof _ISafeUser] => {
     const request: Request = ctx.switchToHttp().getRequest();
+    if (!request.user) return null;
     return data ? request.user?.[data] : request.user;
   },
 );

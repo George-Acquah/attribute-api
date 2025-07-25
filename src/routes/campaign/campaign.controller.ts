@@ -29,20 +29,19 @@ import {
 import { CampaignDto } from './dtos/get-campaign.dto';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
-import { CacheService } from 'src/shared/services/redis/cache.service';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
+import { CodeDto } from '../codes/dto/get-code.dto';
+import { ApiTags } from '@nestjs/swagger';
 
 const CONTROLLER_PATH = 'campaigns';
+@ApiTags('Campaigns')
 @ApiBearerAuth()
 @UseInterceptors(CacheInterceptor)
 @Controller(CONTROLLER_PATH)
 @ApiGlobalResponses()
 @UseGuards(FirebaseAuthGuard, PoliciesGuard)
 export class CampaignController {
-  constructor(
-    private readonly campaignService: CampaignService,
-    private readonly cache: CacheService,
-  ) {}
+  constructor(private readonly campaignService: CampaignService) {}
 
   @Post('create')
   @ApiCreatedResponseWithModel(CampaignDto)
@@ -51,7 +50,11 @@ export class CampaignController {
     @CurrentUser('id') userId: string,
     @Body() dto: CreateCampaignDto,
   ) {
-    const result = await this.campaignService.createCampaign(dto, userId);
+    const result = await this.campaignService.createCampaign(
+      dto,
+      userId,
+      CONTROLLER_PATH,
+    );
 
     return result;
   }
@@ -85,7 +88,12 @@ export class CampaignController {
     @Param('id') id: string,
     @Body() dto: UpdateCampaignDto,
   ) {
-    const result = await this.campaignService.updateCampaign(id, dto, userId);
+    const result = await this.campaignService.updateCampaign(
+      id,
+      dto,
+      userId,
+      CONTROLLER_PATH,
+    );
 
     return result;
   }
@@ -93,8 +101,20 @@ export class CampaignController {
   @Delete(':id')
   @CheckPolicies((ability) => ability.can(Action.Delete, 'Campaign'))
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const result = await this.campaignService.deleteCampaign(id, userId);
+    const result = await this.campaignService.deleteCampaign(
+      id,
+      userId,
+      CONTROLLER_PATH,
+    );
 
     return result;
+  }
+
+  @Get(':id/analytics')
+  @Cacheable((_, params) => `${CONTROLLER_PATH}:analytics:${params.id}`, 60) // 1 minutes cache
+  @ApiOkResponseWithModel(CodeDto)
+  @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
+  async getAnalytics(@Param('id') campaignId: string) {
+    return this.campaignService.getAnalytics(campaignId);
   }
 }
