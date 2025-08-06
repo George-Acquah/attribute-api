@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { User } from '@prisma/client';
 import {
   ApiResponse,
@@ -37,7 +36,10 @@ export class AuthService {
         where: { name: 'user' },
       });
 
-      if (!defaultRole) return new BadRequestResponse('Default role "user" not found in the roles table');
+      if (!defaultRole)
+        return new BadRequestResponse(
+          'Default role "user" not found in the roles table',
+        );
 
       const user = await this.prisma.user.upsert({
         where: { email: decodedToken.email },
@@ -45,7 +47,7 @@ export class AuthService {
           email: decodedToken.email,
           uid: decodedToken.uid,
           name: decodedToken.name || '',
-          img: decodedToken.picture,
+          avatarUrl: decodedToken.picture,
           roles: {
             create: [
               {
@@ -59,7 +61,7 @@ export class AuthService {
         },
         update: {
           name: decodedToken.name || '',
-          img: decodedToken.picture,
+          avatarUrl: decodedToken.picture,
         },
 
         include: {

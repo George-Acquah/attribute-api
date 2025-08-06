@@ -38,6 +38,9 @@ export class CampaignService {
           medium: dto.medium,
           budget: dto.budget,
           ownerId: userId,
+
+          channelId: '',
+          regionId: '',
         },
       });
 
@@ -116,7 +119,15 @@ export class CampaignService {
 
       const result = await this.prisma.campaign.update({
         where: { id },
-        data: dto,
+        data: {
+          name: dto.name,
+          medium: dto.medium,
+          budget: dto.budget,
+          ownerId: userId,
+
+          channelId: '',
+          regionId: '',
+        },
       });
 
       await this.redis.del(`${path}:list:*`);
@@ -150,106 +161,152 @@ export class CampaignService {
     }
   }
 
-  async getAnalytics(campaignId: string) {
-    try {
-      //TOtal Number of people that performed an action divided interacted
-      // Validate campaignId
-      if (!campaignId || typeof campaignId !== 'string')
-        return new BadRequestResponse('Invalid campaign ID');
+  async getAnalytics(campaignId: string, fingerprint: string, userId: string) {
+    this.logger.log('Getting analytics for', {
+      campaignId,
+      fingerprint,
+      userId,
+    });
 
+    try {
+      if (!campaignId || typeof campaignId !== 'string') {
+        return new BadRequestResponse('Invalid campaign ID');
+      }
+
+      // Fetch all active codes under campaign
       const codes = await this.prisma.code.findMany({
         where: {
           campaignId,
           deletedAt: null,
         },
-        include: {
-          interactions: {
-            include: {
-              conversionLinks: {
-                include: {
-                  conversion: true,
-                },
-              },
-            },
-          },
+        select: {
+          id: true,
+          code: true,
         },
       });
 
-      // Handle case where no codes are found
-      if (!codes.length)
+      if (!codes.length) {
         return new OkResponse(
           {
             campaignId,
             totalInteractions: 0,
             totalUniqueInteractions: 0,
             totalConversions: 0,
+            totalUniqueConversions: 0,
             conversionRate: 0,
             codes: [],
             topCodes: [],
           },
           'No codes found for this campaign',
         );
+      }
 
+      const codeIds = codes.map((c) => c.id);
+
+      // Fetch interactions for all codes
+      const interactions = await this.prisma.interaction.findMany({
+        where: {
+          codeId: { in: codeIds },
+        },
+        select: {
+          id: true,
+          codeId: true,
+          userId: true,
+          fingerprint: true,
+          conversionLinks: {
+            select: {
+              conversion: {
+                select: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      // Index for aggregating per code
+      const statsMap = new Map<
+        string,
+        {
+          code: string;
+          interactions: number;
+          uniqueUsers: Set<string>;
+          conversions: Set<string>;
+        }
+      >();
+
+      for (const interaction of interactions) {
+        const identity = interaction.userId || interaction.fingerprint;
+        const codeId = interaction.codeId;
+        const codeMeta = statsMap.get(codeId) || {
+          code: codes.find((c) => c.id === codeId)?.code ?? '',
+          interactions: 0,
+          uniqueUsers: new Set<string>(),
+          conversions: new Set<string>(),
+        };
+
+        codeMeta.interactions += 1;
+        if (identity) codeMeta.uniqueUsers.add(identity);
+        for (const cl of interaction.conversionLinks) {
+          if (cl.conversion?.id) codeMeta.conversions.add(cl.conversion.id);
+        }
+
+        statsMap.set(codeId, codeMeta);
+      }
+
+      // Aggregate totals
       let totalInteractions = 0;
       let totalUniqueInteractions = 0;
       let totalConversions = 0;
 
-      const codeStats = codes.map((code) => {
-        try {
-          const rawInteractions = code.interactions ?? [];
+      const codeStats = Array.from(statsMap.values()).map((stat) => {
+        const uniqueInteractions = stat.uniqueUsers.size;
+        const conversions = stat.conversions.size;
 
-          const interactions = rawInteractions.length;
+        totalInteractions += stat.interactions;
+        totalUniqueInteractions += uniqueInteractions;
+        totalConversions += conversions;
 
-          const uniqueUsers = new Set(
-            rawInteractions
-              .map((i) => i.userId || i.fingerprint)
-              .filter(Boolean),
-          );
-          const uniqueInteractions = uniqueUsers.size;
-
-          const conversions = new Set(
-            rawInteractions.flatMap((i) =>
-              i.conversionLinks?.map((cl) => cl.conversion?.id).filter(Boolean),
-            ) ?? [],
-          ).size;
-
-          totalInteractions += interactions;
-          totalUniqueInteractions += uniqueInteractions;
-          totalConversions += conversions;
-
-          return {
-            code: code.code,
-            interactions,
-            uniqueInteractions,
-            conversions,
-            conversionRate: uniqueInteractions
-              ? conversions / uniqueInteractions
-              : 0,
-          };
-        } catch (error) {
-          this.logger.error(`Error processing code ${code.code}:`, error);
-          return {
-            code: code.code,
-            interactions: 0,
-            conversions: 0,
-            conversionRate: 0,
-          };
-        }
+        return {
+          code: stat.code,
+          interactions: stat.interactions,
+          uniqueInteractions,
+          conversions,
+          conversionRate: uniqueInteractions
+            ? conversions / uniqueInteractions
+            : 0,
+        };
       });
 
       const topCodes = [...codeStats]
         .sort((a, b) => b.conversions - a.conversions)
         .slice(0, 3);
 
+      // ✅ Efficient total unique conversions
+      const uniqueConversionsRes = await this.prisma.$queryRaw<
+        { count: number }[]
+      >`
+      SELECT COUNT(DISTINCT COALESCE("userId", "fingerprint")) as count
+      FROM "conversions"
+      WHERE id IN (
+        SELECT "conversionId"
+        FROM "conversion_interactions"
+        JOIN "interactions" ON "interactions"."id" = "conversion_interactions"."interactionId"
+        JOIN "codes" ON "codes"."id" = "interactions"."codeId"
+        WHERE "codes"."campaignId" = ${campaignId}
+          AND "codes"."deleted_at" IS NULL
+      )
+    `;
+      const totalUniqueConversions = uniqueConversionsRes[0]?.count || 0;
+
       return new OkResponse({
         campaignId,
         totalInteractions,
         totalUniqueInteractions,
         totalConversions,
-        conversionRate:
-          totalUniqueInteractions > 0
-            ? totalConversions / totalUniqueInteractions
-            : 0,
+        totalUniqueConversions,
+        conversionRate: totalUniqueInteractions
+          ? totalConversions / totalUniqueInteractions
+          : 0,
         codes: codeStats,
         topCodes,
       });

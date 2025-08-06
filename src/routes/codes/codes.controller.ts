@@ -57,11 +57,11 @@ export class CodesController {
     );
   }
 
-  @Get(':id')
+  @Get(':codeId')
   @ApiOkResponseWithModel(CodeDto)
   @CheckPolicies((ability) => ability.can(Action.Read, 'Code'))
   @Cacheable((_, params) => `${CONTROLLER_PATH}:${params.id}`, 60)
-  async getCodeById(@Param('id') id: string) {
+  async getCodeById(@Param('codeId') id: string) {
     return await this.codesService.getCodeById(id);
   }
 

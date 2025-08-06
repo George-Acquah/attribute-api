@@ -64,24 +64,22 @@ export class AnalyticsService {
     try {
       const sqlInterval =
         interval === 'day'
-          ? "DATE_TRUNC('day', c.timestamp)"
+          ? 'DATE_TRUNC(\'day\', c."timestamp")'
           : interval === 'week'
-          ? "DATE_TRUNC('week', c.timestamp)"
-          : "DATE_TRUNC('month', c.timestamp)";
+          ? 'DATE_TRUNC(\'week\', c."timestamp")'
+          : 'DATE_TRUNC(\'month\', c."timestamp")';
 
-      const timeline = await this.prisma.$queryRawUnsafe<any[]>(
-        `
-      SELECT ${sqlInterval} as date, COUNT(*) as count
-      FROM conversions c
-      JOIN conversion_interactions ci ON ci.conversion_id = c.id
-      JOIN interactions i ON ci.interaction_id = i.id
-      JOIN codes co ON i.code_id = co.id
-      WHERE co.campaign_id = $1
+      const timeline = await this.prisma.$queryRaw<any[]>`
+      SELECT ${sqlInterval} AS date, COUNT(*) AS count
+      FROM "conversions" c
+      JOIN "conversion_interactions" ci ON ci."conversionId" = c.id
+      JOIN "interactions" i ON ci."interactionId" = i.id
+      JOIN "codes" co ON i."codeId" = co.id
+      WHERE co."campaignId" = ${campaignId}
       GROUP BY date
       ORDER BY date ASC
-    `,
-        campaignId,
-      );
+    `;
+      this.logger.log('Timeline: ', timeline);
 
       return new OkResponse(
         timeline.map((r) => ({

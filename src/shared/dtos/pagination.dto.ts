@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, IsString } from 'class-validator';
+import { IsOptional, IsInt, Min, IsString, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SwaggerApiResponse } from './swagger-responses.dto';
 import { ApiProperty } from '@nestjs/swagger';
@@ -19,6 +19,18 @@ export class PaginationParams {
   @IsOptional()
   @IsString()
   query?: string;
+}
+
+export class PaginationWithDatesParams extends PaginationParams {
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  startDate?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  endDate?: Date;
 }
 
 export class MetaDto {

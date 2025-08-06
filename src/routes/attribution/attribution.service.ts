@@ -13,6 +13,7 @@ export class AttributionService {
     fingerprint?: string,
   ) {
     try {
+      this.logger.log('fingerprint: ', fingerprint);
       const interactionWhere: Prisma.InteractionWhereInput = userId
         ? { userId }
         : fingerprint
@@ -30,7 +31,7 @@ export class AttributionService {
           this.logger.warn(
             `No interactions found for conversion ${conversionId}`,
           );
-          return;
+          throw new Error();
         }
 
         // – Link interactions

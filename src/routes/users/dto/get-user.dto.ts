@@ -9,7 +9,7 @@ export const UserDto = generateDtoClassFromType<User>(
     email: '',
 
     createdAt: new Date(),
-    img: '',
+    avatarUrl: '',
     updatedAt: new Date(),
     uid: '',
     deletedAt: new Date(),

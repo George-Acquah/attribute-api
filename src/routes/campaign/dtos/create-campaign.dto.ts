@@ -6,6 +6,12 @@ export class CreateCampaignDto {
   name: string;
 
   @IsString()
+  channelId: string;
+
+  @IsString()
+  regionId: string;
+
+  @IsString()
   medium: string;
 
   @IsOptional()

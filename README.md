@@ -1,73 +1,128 @@
+# 📊 Offline Attribution Reporting Service
+
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
+  <img src="https://nestjs.com/img/logo-small.svg" width="100" alt="NestJS logo" />
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> A backend-only, headless PDF reporting service for tracking offline marketing attribution campaigns — built with **NestJS**, **Prisma**, **Bull**, and **Puppeteer**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 Features
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- 🖨️ Generate clean PDF reports from campaign data
+- ⏱️ Daily scheduled reports (7 AM) for yesterday’s campaigns
+- 📊 Tracks key KPIs, promo code performance, and funnel steps
+- 🔁 Retry failed report generations (up to 3 times)
+- 📁 Logs every report run (success or failure)
+- 🧾 HTML preview + file-based PDF download
 
-## Installation
+---
 
-```bash
-$ pnpm install
-```
+## 🧱 Tech Stack
 
-## Running the app
+| Layer       | Stack                           |
+|-------------|---------------------------------|
+| Framework   | NestJS                          |
+| ORM         | Prisma + PostgreSQL             |
+| Job Queue   | BullMQ (Redis)                  |
+| Scheduler   | `@nestjs/schedule`              |
+| PDF Engine  | Puppeteer                       |
+| Templating  | Handlebars                      |
+| Email       | Mailtrap via nodemailer         |
+| Container   | Docker-ready                    |
 
-```bash
-# development
-$ pnpm run start
+---
 
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
-```
-
-## Test
+## ⚙️ Installation
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+# install dependencies
+pnpm install
 ```
 
-## Support
+### Set up environment variables
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```env
+DATABASE_URL=
+REDIS_HOST=
+REDIS_PORT=
 
-## Stay in touch
+# Optional mail config (currently unused)
+MAIL_HOST=
+MAIL_PORT=
+MAIL_USER=
+MAIL_PASS=
+```
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## 🛠️ Running the App
 
-Nest is [MIT licensed](LICENSE).
+```bash
+# dev mode
+pnpm run start:dev
+
+# prod build
+pnpm run start:prod
+```
+
+---
+
+## 📦 Docker
+
+```bash
+docker build -t attribution-reporter .
+docker run -p 3000:3000 --env-file .env attribution-reporter
+```
+
+---
+
+## 🔌 API Endpoints
+
+### 📄 Reports
+
+| Method | Endpoint                               | Description                      |
+|--------|----------------------------------------|----------------------------------|
+| POST   | `/reports/:campaignId/generate`        | Queue a report for background PDF generation |
+| POST   | `/reports/:campaignId/manual`          | Generate a report synchronously |
+| GET    | `/reports/:campaignId/view`            | Render an HTML preview |
+| GET    | `/reports/:campaignId/download`        | Download generated PDF |
+
+---
+
+### 🧾 Report Logs
+
+| Method | Endpoint                              | Description                      |
+|--------|----------------------------------------|----------------------------------|
+| GET    | `/report-logs`                        | List all report logs             |
+| POST   | `/report-logs/:logId/retry`           | Retry a failed report (max 3x)   |
+| POST   | `/report-logs/retry-all`              | Retry all failed reports         |
+
+---
+
+## 🧠 Behavior
+
+- **Daily scheduled reports** run at **7 AM**, targeting campaigns that started *yesterday*.
+- Each generation attempt is logged in the `report_logs` table with:
+  - `status`: `success` or `failed`
+  - `filePath`: path to saved PDF
+  - `retryCount`: number of retries
+  - `userId`: optional user ID for accountability
+- Reports are saved to `/reports/` locally
+
+---
+
+## 📌 Future Features
+
+- [ ] Auth with JWT or API Key
+- [ ] Upload to S3/Supabase
+- [ ] Email report notifications
+- [ ] Dashboard with logs and filters
+- [ ] Webhook support
+
+---
+
+## 📝 License
+
+MIT
