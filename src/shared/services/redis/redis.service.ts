@@ -10,7 +10,8 @@ export class RedisService {
   ) {}
 
   async set(key: string, value: any, ttlSeconds?: number) {
-    const data = typeof value === 'string' ? value : JSON.stringify(value);
+    const data = this.safeStringify(value);
+
     if (ttlSeconds) {
       await this.redisClient.set(key, data, 'EX', ttlSeconds);
     } else {
@@ -86,4 +87,11 @@ export class RedisService {
       return false;
     }
   }
+
+  private safeStringify = (value: any) =>
+    typeof value === 'string'
+      ? value
+      : JSON.stringify(value, (_, v) =>
+          typeof v === 'bigint' ? Number(v) : v,
+        );
 }

@@ -95,7 +95,22 @@ export class CodesService {
       searchValue: dto.query,
       where: { campaignId, deletedAt: null },
       // where: { isActive: true },
-      include: { campaign: true, interactions: true },
+      include: {
+        campaign: {
+          select: {
+            name: true,
+            medium: true,
+            id: true,
+          },
+        },
+        interactions: {
+          select: {
+            id: true,
+            type: true,
+            timestamp: true,
+          },
+        },
+      },
     });
   }
 

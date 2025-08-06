@@ -10,8 +10,10 @@ export function fingerprintMiddleware(
     'MIDDDDDDDDDDDDDLLLLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEWWWWWWWWWWWWARRRRRRRRRRRREEEEEEEEEEE',
   );
   const existingId = req.cookies['visitor_id'];
+  console.log('Existing fingeprint: ', existingId);
 
   if (!existingId) {
+    console.log('Creating new fingerprint');
     const fp = generateFingerprintFromRequest(req);
     res.cookie('visitor_id', fp, {
       httpOnly: true,

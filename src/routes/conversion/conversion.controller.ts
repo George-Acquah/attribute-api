@@ -5,6 +5,7 @@ import { CreateConversionDto } from './dtos/create-conversion.dto';
 import { instanceToPlain } from 'class-transformer';
 import { _ICreateConversion } from 'src/shared/interfaces/conversion.interface';
 import { ApiTags } from '@nestjs/swagger';
+import { Fingerprint } from 'src/shared/decorators/fingerprints.decorator';
 
 @ApiTags('Conversion')
 @Controller('conversion')
@@ -14,11 +15,13 @@ export class ConversionController {
   @Post()
   async createConversion(
     @Body() dto: CreateConversionDto,
+    @Fingerprint('fingerprint') fingerprint: string,
     @CurrentUser('id') userId: string,
   ) {
     return await this.conversionService.createConversion({
       ...(instanceToPlain(dto) as Omit<_ICreateConversion, 'userId'>),
       userId,
+      fingerprint,
     });
   }
 }

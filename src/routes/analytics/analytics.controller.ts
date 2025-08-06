@@ -7,16 +7,16 @@ import { ApiTags } from '@nestjs/swagger';
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
-  @Get(':id/top-codes')
-  getTopCodes(@Param('id') id: string) {
-    return this.analyticsService.getTopCodes(id);
+  @Get(':campaignId/top-codes')
+  getTopCodes(@Param('campaignId') campaignId: string) {
+    return this.analyticsService.getTopCodes(campaignId);
   }
 
-  @Get(':id/conversions/timeline')
+  @Get(':campaignId/conversions/timeline')
   getTimeline(
-    @Param('id') id: string,
+    @Param('campaignId') campaignId: string,
     @Query('interval') interval: 'day' | 'week' | 'month' = 'day',
   ) {
-    return this.analyticsService.getConversionTimeline(id, interval);
+    return this.analyticsService.getConversionTimeline(campaignId, interval);
   }
 }

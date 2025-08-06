@@ -66,20 +66,20 @@ model UserRole {
 //Report - Look out for location as well
 
 model Campaign {
-  id        String    @id @default(cuid())
-  name      String
-  descrpition String? @default("")
-  budget Float?  @default(0)
-  target  Json?
-  medium        String     @map("type")
-  actions String[]  @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
-  channel   String    @default("QR")
-  ownerId   String
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  endDate DateTime  @default(now()) @map("end_date") @db.Timestamptz(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
-  owner     User      @relation("OwnerCampaigns", fields: [ownerId], references: [id])
-  codes     Code[]
+  id          String    @id @default(cuid())
+  name        String
+  descrpition String?   @default("")
+  budget      Float?    @default(0)
+  target      Json?
+  medium      String    @map("type")
+  actions     String[]  @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
+  channel     String    @default("QR")
+  ownerId     String
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  endDate     DateTime  @default(now()) @map("end_date") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  owner       User      @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  codes       Code[]
 
   @@map("campaigns")
 }
@@ -98,17 +98,18 @@ model Code {
 }
 
 model Interaction {
-  id          String          @id @default(cuid())
-  userId      String?
-  codeId      String
-  type        InteractionType
-  phoneNumber String?
-  email Json? 
-  metadata    Json?
-  fingerprint String?
-  timestamp   DateTime        @default(now()) @map("timestamp") @db.Timestamptz(6)
-  code        Code            @relation(fields: [codeId], references: [id])
-  user        User?           @relation(fields: [userId], references: [id])
+  id           String          @id @default(cuid())
+  userId       String?
+  codeId       String
+  type         InteractionType
+  phoneNumber  String?
+  email        String?
+  metadata     Json?
+  userMetadata Json?
+  fingerprint  String?
+  timestamp    DateTime        @default(now()) @map("timestamp") @db.Timestamptz(6)
+  code         Code            @relation(fields: [codeId], references: [id])
+  user         User?           @relation(fields: [userId], references: [id])
 
   conversionLinks ConversionInteraction[]
 
@@ -117,6 +118,7 @@ model Interaction {
 
 model Conversion {
   id           String                  @id @default(cuid())
+  fingerprint  String
   userId       String?
   type         ConversionType
   value        Float?
@@ -136,5 +138,3 @@ model ConversionInteraction {
   @@id([conversionId, interactionId])
   @@map("conversion_interactions")
 }
-
-

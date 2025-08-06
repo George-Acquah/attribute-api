@@ -1,11 +1,5 @@
 // dto/create-conversion.dto.ts
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 import { ConversionType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
@@ -23,8 +17,4 @@ export class CreateConversionDto {
   @Type(() => Number)
   @IsNumber()
   value?: number;
-
-  @IsOptional()
-  @IsString()
-  fingerprint?: string;
 }

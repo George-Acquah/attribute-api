@@ -32,6 +32,7 @@ import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { CodeDto } from '../codes/dto/get-code.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { Fingerprint } from 'src/shared/decorators/fingerprints.decorator';
 
 const CONTROLLER_PATH = 'campaigns';
 @ApiTags('Campaigns')
@@ -114,7 +115,11 @@ export class CampaignController {
   @Cacheable((_, params) => `${CONTROLLER_PATH}:analytics:${params.id}`, 60) // 1 minutes cache
   @ApiOkResponseWithModel(CodeDto)
   @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
-  async getAnalytics(@Param('id') campaignId: string) {
-    return this.campaignService.getAnalytics(campaignId);
+  async getAnalytics(
+    @Param('id') campaignId: string,
+    @Fingerprint('fingerprint') fingerprint: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.campaignService.getAnalytics(campaignId, fingerprint, userId);
   }
 }
