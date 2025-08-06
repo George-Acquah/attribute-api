@@ -38,6 +38,9 @@ export class CampaignService {
           medium: dto.medium,
           budget: dto.budget,
           ownerId: userId,
+
+          channelId: '',
+          regionId: '',
         },
       });
 
@@ -116,7 +119,15 @@ export class CampaignService {
 
       const result = await this.prisma.campaign.update({
         where: { id },
-        data: dto,
+        data: {
+          name: dto.name,
+          medium: dto.medium,
+          budget: dto.budget,
+          ownerId: userId,
+
+          channelId: '',
+          regionId: '',
+        },
       });
 
       await this.redis.del(`${path}:list:*`);

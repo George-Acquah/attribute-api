@@ -9,6 +9,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ======================
+// ENUMS
+// ======================
 enum InteractionType {
   SCAN
   PAGE_VIEW
@@ -25,22 +28,28 @@ enum ConversionType {
   CUSTOM
 }
 
+// ======================
+// AUTHENTICATION MODELS
+// ======================
 model User {
-  id           String        @id @default(cuid())
-  uid          String        @unique
-  email        String?       @unique
-  phone        String?       @map("phone_number")
-  name         String?
-  img          String?
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  id        String    @id @default(cuid())
+  uid       String    @unique
+  email     String?   @unique
+  phone     String?   @map("phone_number")
+  name      String?
+  avatarUrl String?   @map("img")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // Relations
   campaigns    Campaign[]    @relation("OwnerCampaigns")
   interactions Interaction[]
   roles        UserRole[]
   conversions  Conversion[]
 
   @@index([email])
+  @@index([phone])
   @@map("users")
 }
 
@@ -54,78 +63,178 @@ model Role {
 }
 
 model UserRole {
-  roleId String
   userId String
-  role   Role   @relation(fields: [roleId], references: [id])
+  roleId String
   user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
 
   @@id([userId, roleId])
   @@map("user_roles")
 }
 
-//Report - Look out for location as well
-
+// ======================
+// CAMPAIGN MODELS
+// ======================
 model Campaign {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  descrpition String?   @default("")
-  budget      Float?    @default(0)
+  description String?  @default("")
+  budget      Float?   @default(0)
   target      Json?
-  medium      String    @map("type")
-  actions     String[]  @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
-  channel     String    @default("QR")
-  ownerId     String
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  endDate     DateTime  @default(now()) @map("end_date") @db.Timestamptz(6)
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
-  owner       User      @relation("OwnerCampaigns", fields: [ownerId], references: [id])
-  codes       Code[]
+  medium      String   @map("type")
+  actions     String[] @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
 
+  // Foreign keys
+  channelId String
+  ownerId   String
+  regionId  String
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  startDate DateTime  @default(now()) @map("start_date") @db.Timestamptz(6)
+  endDate   DateTime  @default(now()) @map("end_date") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // Relations
+  channel     Channel      @relation(fields: [channelId], references: [id])
+  owner       User         @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  codes       Code[]
+  geoLifts    GeoLift[]
+  funnelSteps FunnelStep[]
+  region      Region       @relation(fields: [regionId], references: [id])
+  reportLogs  ReportLog[]
+
+  @@index([channelId, ownerId, regionId, createdAt])
   @@map("campaigns")
 }
 
+model Channel {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  campaigns Campaign[]
+
+  @@map("channels")
+}
+
+// ======================
+// GEOGRAPHICAL MODELS
+// ======================
+model Country {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  code    String?  @unique // Adding country code (e.g., "US", "GB")
+  regions Region[]
+
+  @@map("countries")
+}
+
+model Region {
+  id        String     @id @default(uuid())
+  name      String
+  countryId String
+  country   Country    @relation(fields: [countryId], references: [id])
+  campaigns Campaign[]
+  geoLifts  GeoLift[]
+
+  @@unique([name, countryId])
+  @@index([countryId])
+  @@map("regions")
+}
+
+// ======================
+// TRACKING MODELS
+// ======================
 model Code {
-  id           String        @id @default(cuid())
-  code         String        @unique
-  campaignId   String
-  qrUrl        String?
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  id         String  @id @default(cuid())
+  code       String  @unique
+  campaignId String
+  qrUrl      String?
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // Relations
   campaign     Campaign      @relation(fields: [campaignId], references: [id])
   interactions Interaction[]
 
+  @@index([campaignId])
   @@map("codes")
 }
 
+model GeoLift {
+  id         String @id @default(uuid())
+  upliftPct  Float
+  keyDriver  String
+  campaignId String
+  regionId   String
+
+  // Relations
+  region   Region   @relation(fields: [regionId], references: [id])
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+
+  @@unique([campaignId, regionId])
+  @@index([campaignId, regionId])
+  @@map("geo_lifts")
+}
+
+model FunnelStep {
+  id         String   @id @default(uuid())
+  name       String   @map("step") // Renamed for clarity
+  order      Int
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  @@unique([campaignId, order])
+  @@index([campaignId])
+  @@map("funnel_steps")
+}
+
+// ======================
+// INTERACTION MODELS
+// ======================
 model Interaction {
-  id           String          @id @default(cuid())
+  id          String          @id @default(cuid())
+  type        InteractionType
+  fingerprint String?
+
+  // User information
   userId       String?
-  codeId       String
-  type         InteractionType
   phoneNumber  String?
   email        String?
-  metadata     Json?
   userMetadata Json?
-  fingerprint  String?
-  timestamp    DateTime        @default(now()) @map("timestamp") @db.Timestamptz(6)
-  code         Code            @relation(fields: [codeId], references: [id])
-  user         User?           @relation(fields: [userId], references: [id])
 
+  // Tracking
+  codeId    String
+  metadata  Json?
+  timestamp DateTime @default(now()) @map("timestamp") @db.Timestamptz(6)
+
+  // Relations
+  code            Code                    @relation(fields: [codeId], references: [id])
+  user            User?                   @relation(fields: [userId], references: [id])
   conversionLinks ConversionInteraction[]
 
+  @@index([userId, codeId, timestamp])
+  @@index([fingerprint])
   @@map("interactions")
 }
 
 model Conversion {
-  id           String                  @id @default(cuid())
-  fingerprint  String
-  userId       String?
-  type         ConversionType
-  value        Float?
-  timestamp    DateTime                @default(now()) @db.Timestamptz(6)
-  user         User?                   @relation(fields: [userId], references: [id])
+  id          String         @id @default(cuid())
+  type        ConversionType
+  value       Float?
+  fingerprint String
+  timestamp   DateTime       @default(now()) @db.Timestamptz(6)
+
+  // User reference
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Relations
   interactions ConversionInteraction[]
 
+  @@index([userId, timestamp])
+  @@index([fingerprint])
   @@map("conversions")
 }
 
@@ -136,5 +245,24 @@ model ConversionInteraction {
   interaction   Interaction @relation(fields: [interactionId], references: [id])
 
   @@id([conversionId, interactionId])
+  @@index([interactionId])
   @@map("conversion_interactions")
+}
+
+// ======================
+// INTERACTION MODELS
+// ======================
+model ReportLog {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+  filePath   String   @map("file_path")
+  fileName   String   @map("file_name")
+  status     String // 'success' | 'failed'
+  error      String?
+  retryCount Int      @default(0)
+  userId     String? // Nullable for scheduled jobs
+
+  @@map("report_logs")
 }

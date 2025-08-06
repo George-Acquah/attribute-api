@@ -5,4 +5,8 @@ export interface _ICreateCampaign {
   channel?: string;
   budget?: number;
   numberOfCodes?: number;
+
+  channelId: string;
+
+  regionId: string;
 }

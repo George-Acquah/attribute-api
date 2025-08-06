@@ -12,6 +12,7 @@ import { InteractionModule } from './routes/interaction/interaction.module';
 import { ConversionModule } from './routes/conversion/conversion.module';
 import { AttributionModule } from './routes/attribution/attribution.module';
 import { AnalyticsModule } from './routes/analytics/analytics.module';
+import { ReportModule } from './routes/report/report.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AnalyticsModule } from './routes/analytics/analytics.module';
     ConversionModule,
     AttributionModule,
     AnalyticsModule,
+    ReportModule,
   ],
   providers: [],
   controllers: [RedisController],

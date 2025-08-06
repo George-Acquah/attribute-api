@@ -21,7 +21,6 @@ export class CodesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-
     private readonly paginationService: PaginationService,
   ) {}
 
