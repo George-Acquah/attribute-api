@@ -110,27 +110,14 @@ USER node
 ###################
 FROM node:20-alpine AS production
 
-# Install Chromium for build-time Puppeteer use (if needed)
-RUN apt-get update && apt-get install -y \
+# Install Chromium + dependencies for Alpine
+RUN apk add --no-cache \
     chromium \
+    nss \
+    freetype \
+    harfbuzz \
     ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libgbm1 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libxkbcommon0 \
-    libxshmfence1 \
-    xdg-utils \
- && rm -rf /var/lib/apt/lists/*
+    ttf-freefont
 
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
