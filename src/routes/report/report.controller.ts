@@ -14,12 +14,10 @@ import { Response } from 'express';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { BullService } from 'src/shared/services/bull/bull.service';
-import {
-  IReportLogFilter,
-  ReportStatus,
-} from 'src/shared/interfaces/report.interface';
+import { IReportLogFilter } from 'src/shared/interfaces/report.interface';
 import { GetLogsDto } from './dtos/get-report.dto';
 import { instanceToPlain } from 'class-transformer';
+import { ReportStatus } from 'src/shared/enums/reports.enums';
 
 @Controller('reports')
 export class ReportController {

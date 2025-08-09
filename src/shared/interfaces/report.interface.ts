@@ -1,6 +1,5 @@
 import { Campaign } from '@prisma/client';
-
-export type ReportStatus = 'success' | 'failed' | 'processing';
+import { ReportStatus } from '../enums/reports.enums';
 
 export interface IReportLog {
   id: string;

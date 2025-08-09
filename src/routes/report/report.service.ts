@@ -18,6 +18,7 @@ import {
 import { PaginationService } from 'src/shared/services/common/pagination.service';
 import { _IPaginationWithDatesParams } from 'src/shared/interfaces/pagination.interface';
 import { Prisma, ReportLog } from '@prisma/client';
+import { ReportStatus } from 'src/shared/enums/reports.enums';
 
 @Injectable()
 export class ReportService {
@@ -321,7 +322,7 @@ export class ReportService {
         fileName: `${campaignId}.pdf`,
         retryCount,
         userId: null, // system-run
-        status: 'success',
+        status: ReportStatus.COMPLETED,
       });
 
       return new CreatedResponse(
@@ -342,7 +343,7 @@ export class ReportService {
         filePath: '',
 
         fileName: '',
-        status: 'failed',
+        status: ReportStatus.FAILED,
         retryCount,
         userId: null,
         error: err instanceof Error ? err.message : String(err),
