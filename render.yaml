@@ -23,11 +23,13 @@ services:
       - key: NODE_ENV
         value: production
       - key: FIREBASE_PROJECT_ID
-        value: demo-project
+        value: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: false
       - key: REDIS_URL
         fromService:
           name: attribute-redis
