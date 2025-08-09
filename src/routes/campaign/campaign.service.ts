@@ -39,8 +39,8 @@ export class CampaignService {
           budget: dto.budget,
           ownerId: userId,
 
-          channelId: '',
-          regionId: '',
+          channelId: dto.channelId,
+          regionId: dto.regionId,
         },
       });
 

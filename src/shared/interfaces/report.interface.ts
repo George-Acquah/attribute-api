@@ -1,6 +1,5 @@
 import { Campaign } from '@prisma/client';
-
-export type ReportStatus = 'success' | 'failed' | 'processing';
+import { ReportStatus } from '../enums/reports.enums';
 
 export interface IReportLog {
   id: string;
@@ -15,9 +14,10 @@ export interface IReportLog {
 
 // For creating new report logs
 export interface ICreateReportLogInput {
+  logId?: string;
   campaignId: string;
   filePath: string;
-  fileName?: string;
+  fileName: string;
   status: ReportStatus;
   error?: string | null;
 

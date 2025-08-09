@@ -7,36 +7,36 @@ import {
   HttpException,
   HttpStatus,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { Response } from 'express';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { BullService } from 'src/shared/services/bull/bull.service';
-import { PaginationWithDatesParams } from 'src/shared/dtos/pagination.dto';
-import {
-  IReportLogFilter,
-  ReportStatus,
-} from 'src/shared/interfaces/report.interface';
+import { IReportLogFilter } from 'src/shared/interfaces/report.interface';
+import { GetLogsDto } from './dtos/get-report.dto';
+import { instanceToPlain } from 'class-transformer';
+import { ReportStatus } from 'src/shared/enums/reports.enums';
 
 @Controller('reports')
 export class ReportController {
+  private readonly logger = new Logger(ReportController.name);
   constructor(
     private readonly reportService: ReportService,
     private readonly bullService: BullService,
   ) {}
 
   @Get()
-  async getLogs(
-    @Query('campaignId') campaignId?: string,
-    @Query('status') status?: string,
-    @Query() dto?: PaginationWithDatesParams,
-  ) {
+  async getLogs(@Query() dto?: GetLogsDto) {
     const filter: IReportLogFilter = {};
-    if (campaignId) filter.campaignId = campaignId;
-    if (status) filter.status = status as ReportStatus;
+    if (dto.campaignId) filter.campaignId = dto.campaignId;
+    if (dto.status) filter.status = dto.status as ReportStatus;
 
-    const logs = await this.reportService.getReportLogs(filter, dto);
+    const logs = await this.reportService.getReportLogs(
+      filter,
+      instanceToPlain(dto),
+    );
 
     return logs;
   }

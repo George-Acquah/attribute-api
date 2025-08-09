@@ -83,6 +83,7 @@ model Campaign {
   target      Json?
   medium      String   @map("type")
   actions     String[] @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
+  webhookUrl  String?
 
   // Foreign keys
   channelId String
