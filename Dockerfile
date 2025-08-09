@@ -4,7 +4,7 @@
 FROM node:20 AS development
 
 # Install Chrome dependencies & Chromium
-RUN apt-get update && apt-get install -y openssl \
+RUN apt-get update && apt-get install -y \
     chromium \
     ca-certificates \
     fonts-liberation \
@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y openssl \
     xdg-utils \
  && rm -rf /var/lib/apt/lists/*
 
+# Skip Puppeteer download in dev (optional)
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -56,28 +59,6 @@ USER node
 # BUILD FOR PRODUCTION
 ###################
 FROM node:20-alpine AS build
-
-# Install Chromium for build-time Puppeteer use (if needed)
-RUN apt-get update && apt-get install -y \
-    chromium \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libgbm1 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libxkbcommon0 \
-    libxshmfence1 \
-    xdg-utils \
- && rm -rf /var/lib/apt/lists/*
 
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -119,6 +100,10 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont
 
+# Puppeteer env vars
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -132,9 +117,6 @@ COPY --chown=node:node --from=build /usr/src/app/src/database ./src/database
 
 # Generate Prisma client for runtime
 RUN pnpm run prisma:generate
-
-# Let Puppeteer know where Chromium is
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Start the app with migration
 CMD ["pnpm", "run", "start:migrate:prod"]
