@@ -63,6 +63,14 @@ COPY . .
 
 RUN pnpm run build
 
+# Set environment
+ENV NODE_ENV production
+
+# Install only production dependencies
+RUN rm -rf node_modules && pnpm install --prod --frozen-lockfile && pnpm store prune
+
+USER node
+
 
 ###################
 # PRODUCTION (Alpine)
