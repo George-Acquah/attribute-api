@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import * as Handlebars from 'handlebars';
 import * as puppeteer from 'puppeteer';
 import * as fs from 'fs-extra';
@@ -125,7 +125,8 @@ export class ReportService {
 
       await this.generateAndSaveReport(
         reportLog.campaignId,
-        reportLog.retryCount + 1,
+        reportLog.retryCount,
+        reportLog.id,
         'Report generation retried successfully',
         `Failed to retry report with id ${id}`,
       );
@@ -152,7 +153,8 @@ export class ReportService {
           try {
             const result = await this.generateAndSaveReport(
               log.campaignId,
-              log.retryCount + 1,
+              log.retryCount,
+              log.id,
               'Report generation retried successfully',
               `Failed to retry report with id ${log.id}`,
             );
@@ -207,42 +209,115 @@ export class ReportService {
     });
   }
 
-  async renderHTML(campaignId: string): Promise<string> {
-    const campaign = await this.getCampaignData(campaignId);
+  async renderHTML(campaignId: string) {
+    try {
+      const campaign = await this.getCampaignData(campaignId);
 
-    const filePath = path.join(__dirname, 'templates', 'report.hbs');
-    const source = await fs.readFile(filePath, 'utf8');
-    const template = Handlebars.compile(source);
+      if (!campaign) {
+        return new NotFoundResponse(`No campaign found with ID: ${campaignId}`);
+      }
 
-    return template(campaign);
+      const filePath = path.join(__dirname, 'templates', 'report.hbs');
+
+      if (!(await fs.pathExists(filePath))) {
+        return new NotFoundResponse(`Template file not found: ${filePath}`);
+      }
+
+      const source = await fs.readFile(filePath, 'utf8');
+      const template = Handlebars.compile(source);
+
+      const templateResult = template(campaign);
+
+      return new OkResponse(templateResult, 'HTML rendered successfully.');
+    } catch (err) {
+      this.logger.error(
+        `Error rendering HTML for campaign ${campaignId}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+      return new InternalServerErrorResponse(
+        `Failed to render HTML for campaign ${campaignId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 
-  async generatePDF(campaignId: string): Promise<string> {
-    const html = await this.renderHTML(campaignId);
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+  async generatePDF(campaignId: string) {
+    let browser: puppeteer.Browser | null = null;
 
-    const pdfPath = path.join(__dirname, `../../reports/${campaignId}.pdf`);
-    await fs.ensureDir(path.dirname(pdfPath));
-    await page.pdf({ path: pdfPath, format: 'A4' });
+    try {
+      const htmlResult = await this.renderHTML(campaignId);
+      if (!htmlResult.data || htmlResult.statusCode !== HttpStatus.OK) {
+        return htmlResult;
+      }
 
-    await browser.close();
-    return pdfPath;
+      this.logger.log(
+        `Puppeteer executable path from env: ${process.env.PUPPETEER_EXECUTABLE_PATH}`,
+      );
+
+      browser = await puppeteer.launch({
+        headless: true,
+        executablePath:
+          process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+
+      this.logger.log('Puppeteer launched successfully');
+
+      const page = await browser.newPage();
+
+      await page.setContent(htmlResult.data, { waitUntil: 'networkidle0' });
+
+      this.logger.log(`Generating PDF for campaign: ${campaignId}`);
+      const pdfPath = path.join(__dirname, `../../reports/${campaignId}.pdf`);
+      this.logger.log(`PDF will be saved to: ${pdfPath}`);
+
+      await fs.ensureDir(path.dirname(pdfPath));
+      await page.pdf({ path: pdfPath, format: 'A4' });
+
+      return new OkResponse(pdfPath);
+    } catch (err) {
+      this.logger.error(
+        `Error generating PDF for campaign ${campaignId}`,
+        err instanceof Error ? err.stack : err,
+      );
+      return new InternalServerErrorResponse(
+        `PDF generation failed for campaign ${campaignId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    } finally {
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeErr) {
+          this.logger.warn(
+            `Failed to close Puppeteer browser for campaign ${campaignId}: ${
+              closeErr instanceof Error ? closeErr.message : String(closeErr)
+            }`,
+          );
+        }
+      }
+    }
   }
 
   async generateAndSaveReport(
     campaignId: string,
     retryCount = 0,
+    logId?: string,
     successMsg = 'Report generated successfully',
     errorMsg = 'Failed to generate report',
   ) {
     try {
-      const filePath = await this.generatePDF(campaignId);
+      const filePathResult = await this.generatePDF(campaignId);
+
+      if (!filePathResult.data || filePathResult.statusCode !== HttpStatus.OK) {
+        return filePathResult;
+      }
 
       await this.createReport({
         campaignId,
-        filePath,
+        filePath: filePathResult.data,
         fileName: `${campaignId}.pdf`,
         retryCount,
         userId: null, // system-run
@@ -251,19 +326,26 @@ export class ReportService {
 
       return new CreatedResponse(
         {
-          filePath,
+          filePath: filePathResult.data,
           downloadUrl: `/reports/${campaignId}/download`,
         },
         successMsg,
       );
     } catch (err) {
+      this.logger.error(
+        `Failed to generate report for campaign ${campaignId}`,
+        err instanceof Error ? err.stack : err,
+      );
       await this.createReport({
+        logId,
         campaignId,
         filePath: '',
+
+        fileName: '',
         status: 'failed',
         retryCount,
-        userId: null, // system-run
-        error: err.message,
+        userId: null,
+        error: err instanceof Error ? err.message : String(err),
       });
 
       return new InternalServerErrorResponse(errorMsg);
@@ -271,14 +353,23 @@ export class ReportService {
   }
 
   private async createReport(log: ICreateReportLogInput) {
-    await this.prisma.reportLog.create({
-      data: {
+    await this.prisma.reportLog.upsert({
+      where: { id: log.logId || '' },
+      create: {
         campaignId: log.campaignId,
         filePath: log.filePath,
         fileName: log.fileName,
         status: log.status,
 
         retryCount: log.retryCount || 0,
+        userId: log.userId || null,
+        error: log.error || null,
+      },
+      update: {
+        filePath: log.filePath,
+        fileName: log.fileName,
+        status: log.status,
+        retryCount: log.retryCount + 1,
         userId: log.userId || null,
         error: log.error || null,
       },

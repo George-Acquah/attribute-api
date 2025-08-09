@@ -39,7 +39,7 @@ export class ScheduledTasksService {
         await this.prisma.reportLog.create({
           data: {
             campaignId: campaign.id,
-            filePath,
+            filePath: filePath.data,
             fileName: `${campaign.id}.pdf`,
             status: 'success',
           },

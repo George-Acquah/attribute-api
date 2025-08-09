@@ -30,6 +30,7 @@ export const CampaignDto = generateDtoClassFromType<Campaign>(
     channelId: '',
     regionId: '',
     startDate: new Date(),
+    webhookUrl: '',
   },
   'CampaignsDto',
 );

@@ -4,6 +4,7 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "plugins": ["@nestjs/swagger"],
+    "assets": ["**/*.hbs"],
     "watchAssets": true,
     "builder": "tsc",
     "tsConfigPath": "tsconfig.build.json",

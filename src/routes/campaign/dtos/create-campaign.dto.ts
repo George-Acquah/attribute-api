@@ -15,10 +15,6 @@ export class CreateCampaignDto {
   medium: string;
 
   @IsOptional()
-  @IsString()
-  channel?: string;
-
-  @IsOptional()
   @Type(() => Number)
   @Min(1)
   budget?: number;
