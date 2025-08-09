@@ -91,14 +91,15 @@ USER node
 ###################
 FROM node:20-alpine AS production
 
-# Install Chromium + dependencies for Alpine
+# Install only runtime Chromium deps — no dev packages
 RUN apk add --no-cache \
     chromium \
     nss \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+ && rm -rf /var/cache/apk/*
 
 # Puppeteer env vars
 ENV PUPPETEER_SKIP_DOWNLOAD=true
