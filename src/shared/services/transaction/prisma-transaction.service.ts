@@ -1,18 +1,16 @@
-// src/common/services/transaction.service.ts
-
-import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
 
 @Injectable()
 export class PrismaTransactionService {
   private readonly logger = new Logger(PrismaTransactionService.name);
 
   constructor(private readonly prisma: PrismaService) {}
-
   /**
-   * Runs a callback inside a database transaction.
-   * Rolls back automatically on any error.
+   * Run a Prisma transaction with error handling
+   * @param callback Function to execute within the transaction
    */
   async run<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -26,16 +24,16 @@ export class PrismaTransactionService {
       throw this.mapError(err);
     }
   }
-
   /**
-   * Map raw Prisma errors to custom error types if needed
+   * Map Prisma errors to application-specific errors
+   * @param err The error thrown by Prisma
    */
   private mapError(err: any): Error {
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       switch (err.code) {
-        case 'P2002': // Unique constraint
+        case 'P2002':
           return new Error('Duplicate entry detected');
-        case 'P2025': // Not found
+        case 'P2025':
           return new Error('Record to update/delete does not exist');
         default:
           return new Error(`Database error: ${err.message}`);
@@ -46,6 +44,6 @@ export class PrismaTransactionService {
       return new Error('Unknown database error occurred');
     }
 
-    return err; // Rethrow other errors
+    return err;
   }
 }

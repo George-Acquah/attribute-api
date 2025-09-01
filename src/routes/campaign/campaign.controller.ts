@@ -81,12 +81,12 @@ export class CampaignController {
     return result;
   }
 
-  @Patch(':id')
+  @Patch(':campaignId')
   @ApiOkResponseWithModel(CampaignDto)
   @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign', 'all'))
   async update(
     @CurrentUser('id') userId: string,
-    @Param('id') id: string,
+    @Param('campaignId') id: string,
     @Body() dto: UpdateCampaignDto,
   ) {
     const result = await this.campaignService.updateCampaign(
@@ -99,11 +99,24 @@ export class CampaignController {
     return result;
   }
 
-  @Delete(':id')
+  @Patch(':campaignId/webhook')
+  @ApiOkResponseWithModel(CampaignDto)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign', 'all'))
+  async setWebhookUrl(
+    @Param('campaignId') id: string,
+    @Query('webhookUrl') webhookUrl: string,
+  ) {
+    return await this.campaignService.updateWebhookUrl(id, webhookUrl);
+  }
+
+  @Delete(':campaignId')
   @CheckPolicies((ability) => ability.can(Action.Delete, 'Campaign'))
-  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async remove(
+    @CurrentUser('id') userId: string,
+    @Param('campaignId') campaignId: string,
+  ) {
     const result = await this.campaignService.deleteCampaign(
-      id,
+      campaignId,
       userId,
       CONTROLLER_PATH,
     );
@@ -111,12 +124,15 @@ export class CampaignController {
     return result;
   }
 
-  @Get(':id/analytics')
-  @Cacheable((_, params) => `${CONTROLLER_PATH}:analytics:${params.id}`, 60) // 1 minutes cache
+  @Get(':campaignId/analytics')
+  @Cacheable(
+    (_, params) => `${CONTROLLER_PATH}:analytics:${params.campaignId}`,
+    60,
+  ) // 1 minutes cache
   @ApiOkResponseWithModel(CodeDto)
   @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
   async getAnalytics(
-    @Param('id') campaignId: string,
+    @Param('campaignId') campaignId: string,
     @Fingerprint('fingerprint') fingerprint: string,
     @CurrentUser('id') userId: string,
   ) {

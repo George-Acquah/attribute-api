@@ -1,15 +1,13 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 import { PaginationService } from 'src/shared/services/common/pagination.service';
 import { Prisma, User } from '@prisma/client';
 import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
+import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception';
+import { Logger } from '@nestjs/common/services/logger.service';
 
 @Injectable()
 export class UsersService {

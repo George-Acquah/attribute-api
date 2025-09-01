@@ -21,6 +21,19 @@ export class PaginationParams {
   query?: string;
 }
 
+export class DatesParams {
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  startDate?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  endDate?: Date;
+}
+
+// Combine PaginationParams and DatesParams using intersection type and class inheritance
 export class PaginationWithDatesParams extends PaginationParams {
   @IsOptional()
   @Type(() => Date)

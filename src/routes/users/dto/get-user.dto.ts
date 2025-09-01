@@ -14,6 +14,7 @@ export const UserDto = generateDtoClassFromType<User>(
     uid: '',
     deletedAt: new Date(),
     phone: '',
+    isBanned: false,
   },
   'UsersDto',
 );

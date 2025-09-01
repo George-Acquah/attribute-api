@@ -1,4 +1,3 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import * as Handlebars from 'handlebars';
 import * as puppeteer from 'puppeteer';
 import * as fs from 'fs-extra';
@@ -14,11 +13,19 @@ import {
   InternalServerErrorResponse,
   NotFoundResponse,
   OkResponse,
-} from 'src/shared/res/api.response';
+} from 'src/shared/res/responses';
 import { PaginationService } from 'src/shared/services/common/pagination.service';
-import { _IPaginationWithDatesParams } from 'src/shared/interfaces/pagination.interface';
+import {
+  _IDatesParams,
+  _IPaginationWithDatesParams,
+} from 'src/shared/interfaces/pagination.interface';
 import { Prisma, ReportLog } from '@prisma/client';
 import { ReportStatus } from 'src/shared/enums/reports.enums';
+import { handleError } from 'src/shared/utils/errors';
+import { BullService } from 'src/shared/services/bull/bull.service';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
+import { HttpStatus } from '@nestjs/common/enums/http-status.enum';
 
 @Injectable()
 export class ReportService {
@@ -26,6 +33,7 @@ export class ReportService {
   constructor(
     private prisma: PrismaService,
     private pagination: PaginationService,
+    private readonly bullService: BullService,
   ) {}
 
   async getReportLogs(
@@ -78,8 +86,7 @@ export class ReportService {
         },
       );
     } catch (err) {
-      this.logger.error('Failed to fetch report logs', err);
-      return new InternalServerErrorResponse('Failed to fetch report logs');
+      return handleError('getReportLogs', err, 'Failed to fetch report logs');
     }
   }
 
@@ -103,8 +110,9 @@ export class ReportService {
 
       return new OkResponse(result, 'Report log fetched successfully');
     } catch (err) {
-      this.logger.error(`Failed to fetch report log with id ${id}`, err);
-      return new InternalServerErrorResponse(
+      return handleError(
+        `getReportLogById(${id})`,
+        err,
         `Failed to fetch report log with id ${id}`,
       );
     }
@@ -132,8 +140,9 @@ export class ReportService {
         `Failed to retry report with id ${id}`,
       );
     } catch (err) {
-      this.logger.error(`Failed to retry report with id ${id}`, err);
-      return new InternalServerErrorResponse(
+      return handleError(
+        `retryFailedReport(${id})`,
+        err,
         `Failed to retry report with id ${id}`,
       );
     }
@@ -188,9 +197,10 @@ export class ReportService {
 
       return new OkResponse(results, 'Retry results for failed reports');
     } catch (error) {
-      this.logger.error('Failed to fetch failed report logs', error);
-      return new InternalServerErrorResponse(
-        'Failed to process retry requests',
+      return handleError(
+        'retryAllFailed',
+        error,
+        'Failed to retry all failed reports',
       );
     }
   }
@@ -231,14 +241,10 @@ export class ReportService {
 
       return new OkResponse(templateResult, 'HTML rendered successfully.');
     } catch (err) {
-      this.logger.error(
-        `Error rendering HTML for campaign ${campaignId}`,
-        err instanceof Error ? err.stack : String(err),
-      );
-      return new InternalServerErrorResponse(
-        `Failed to render HTML for campaign ${campaignId}: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+      return handleError(
+        `renderHTML(${campaignId})`,
+        err,
+        `Failed to render HTML for campaign ${campaignId}`,
       );
     }
   }
@@ -278,14 +284,10 @@ export class ReportService {
 
       return new OkResponse(pdfPath);
     } catch (err) {
-      this.logger.error(
-        `Error generating PDF for campaign ${campaignId}`,
-        err instanceof Error ? err.stack : err,
-      );
-      return new InternalServerErrorResponse(
-        `PDF generation failed for campaign ${campaignId}: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+      return handleError(
+        `generatePDF(${campaignId})`,
+        err,
+        'Failed to generate PDF',
       );
     } finally {
       if (browser) {
@@ -325,6 +327,14 @@ export class ReportService {
         status: ReportStatus.COMPLETED,
       });
 
+      // Notify webhook if present
+      await this.bullService.queueWebhook(campaignId, {
+        campaignId,
+        filePath: filePathResult.data,
+        status: ReportStatus.COMPLETED,
+        generatedAt: new Date().toISOString(),
+      });
+
       return new CreatedResponse(
         {
           filePath: filePathResult.data,
@@ -333,10 +343,6 @@ export class ReportService {
         successMsg,
       );
     } catch (err) {
-      this.logger.error(
-        `Failed to generate report for campaign ${campaignId}`,
-        err instanceof Error ? err.stack : err,
-      );
       await this.createReport({
         logId,
         campaignId,
@@ -349,7 +355,65 @@ export class ReportService {
         error: err instanceof Error ? err.message : String(err),
       });
 
-      return new InternalServerErrorResponse(errorMsg);
+      return handleError(`generateAndSaveReport(${campaignId})`, err, errorMsg);
+    }
+  }
+
+  async getReportSummary({ startDate, endDate }: _IDatesParams) {
+    try {
+      const dateFilter =
+        startDate || endDate
+          ? {
+              createdAt: {
+                ...(startDate && { gte: startDate }),
+                ...(endDate && { lte: endDate }),
+              },
+            }
+          : {};
+
+      const [totalReports, completedReports, failedReports] = await Promise.all(
+        [
+          this.prisma.reportLog.count({
+            where: dateFilter,
+          }),
+          this.prisma.reportLog.count({
+            where: {
+              status: ReportStatus.COMPLETED,
+              ...dateFilter,
+            },
+          }),
+          this.prisma.reportLog.count({
+            where: {
+              status: ReportStatus.FAILED,
+              ...dateFilter,
+            },
+          }),
+        ],
+      );
+
+      const topCampaigns = await this.prisma.reportLog.groupBy({
+        where: dateFilter,
+        by: ['campaignId'],
+        _count: { campaignId: true },
+        orderBy: { _count: { campaignId: 'desc' } },
+        take: 5,
+      });
+
+      return new OkResponse(
+        {
+          totalReports,
+          completedReports,
+          failedReports,
+          topCampaigns,
+        },
+        'Report summary fetched successfully',
+      );
+    } catch (err) {
+      return handleError(
+        'getReportSummary',
+        err,
+        'Failed to fetch report summary',
+      );
     }
   }
 

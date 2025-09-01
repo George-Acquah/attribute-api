@@ -1,21 +1,25 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
 import { Campaign, Code, Prisma } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import { _ICreateCampaign } from 'src/shared/interfaces/campaign.interface';
 import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
+import { ApiResponse } from 'src/shared/res/api.response';
 import {
-  ApiResponse,
   BadRequestResponse,
   CreatedResponse,
   ForbiddenResponse,
   InternalServerErrorResponse,
   NotFoundResponse,
   OkResponse,
-} from 'src/shared/res/api.response';
-import { PaginationService } from 'src/shared/services/common/pagination.service';
-import { PrismaService } from 'src/shared/services/prisma/prisma.service';
-import { RedisService } from 'src/shared/services/redis/redis.service';
+} from 'src/shared/res/responses';
+import {
+  PaginationService,
+  PrismaService,
+  RedisService,
+} from 'src/shared/services';
 import { generateQrDataUrl } from 'src/shared/utils/codes';
+import { handleError } from 'src/shared/utils/errors';
 
 @Injectable()
 export class CampaignService {
@@ -136,6 +140,39 @@ export class CampaignService {
     } catch (error) {
       this.logger.error(error);
       return new InternalServerErrorResponse();
+    }
+  }
+
+  async updateWebhookUrl(id: string, webhookUrl: string) {
+    try {
+      if (!id || !webhookUrl) {
+        return new BadRequestResponse(
+          'Campaign ID and webhook URL are required.',
+        );
+      }
+      const campaign = await this.prisma.campaign.findUnique({
+        where: { id },
+      });
+
+      if (!campaign) {
+        return new NotFoundResponse(`Campaign with ID ${id} not found.`);
+      }
+
+      const updatedCampaign = await this.prisma.campaign.update({
+        where: { id },
+        data: { webhookUrl },
+      });
+
+      return new OkResponse(
+        updatedCampaign,
+        `Webhook URL updated successfully for campaign ${id}.`,
+      );
+    } catch (err) {
+      return handleError(
+        `updateWebhookUrl(${id})`,
+        err,
+        `Failed to update webhook URL for campaign ${id}`,
+      );
     }
   }
 

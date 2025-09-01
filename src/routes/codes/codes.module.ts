@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common/decorators/modules/module.decorator';
 import { CodesService } from './codes.service';
 import { CodesController } from './codes.controller';
 import { PaginationService } from 'src/shared/services/common/pagination.service';

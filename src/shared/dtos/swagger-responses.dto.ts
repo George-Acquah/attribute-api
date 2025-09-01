@@ -1,6 +1,6 @@
 // src/shared/res/swagger-responses.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common/enums/http-status.enum';
+import { ApiProperty } from '@nestjs/swagger/dist/decorators/api-property.decorator';
 
 export class SwaggerApiResponse<T> {
   @ApiProperty({

@@ -1,7 +1,7 @@
-import { Provider } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { IFirebaseConfig } from '../interfaces/firebase.interface';
+import { Provider } from '@nestjs/common/interfaces/modules/provider.interface';
+import { ConfigService } from '@nestjs/config/dist/config.service';
 
 export const FIREBASE_ADMIN = 'FIREBASE_ADMIN';
 

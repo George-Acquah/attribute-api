@@ -1,4 +1,4 @@
-import { SetMetadata } from '@nestjs/common';
+import { SetMetadata } from '@nestjs/common/decorators/core/set-metadata.decorator';
 
 export const CACHE_KEY_METADATA = 'cache_key';
 export const CACHE_TTL_METADATA = 'cache_ttl';

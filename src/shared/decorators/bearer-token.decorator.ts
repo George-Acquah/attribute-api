@@ -1,9 +1,6 @@
-// src/common/decorators/bearer-token.decorator.ts
-import {
-  createParamDecorator,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { createParamDecorator } from '@nestjs/common/decorators/http/create-route-param-metadata.decorator';
+import { UnauthorizedException } from '@nestjs/common/exceptions/unauthorized.exception';
+import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-context.interface';
 
 export const BearerToken = createParamDecorator(
   (data: 'Bearer', ctx: ExecutionContext): string | null => {

@@ -1,17 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
 import { User } from '@prisma/client';
-import {
-  ApiResponse,
-  BadRequestResponse,
-  ForbiddenResponse,
-  InternalServerErrorResponse,
-  NotFoundResponse,
-  OkResponse,
-} from 'src/shared/res/api.response';
+import { ApiResponse } from 'src/shared/res/api.response';
 import { FirebaseAdminService } from 'src/shared/services/firebase/firebase-admin.service';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 import { RedisService } from 'src/shared/services/redis/redis.service';
 import { RedisKeyPrefixes } from 'src/shared/constants/redis.constants';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
+import {
+  BadRequestResponse,
+  OkResponse,
+  ForbiddenResponse,
+  InternalServerErrorResponse,
+  NotFoundResponse,
+} from 'src/shared/res/responses';
 
 @Injectable()
 export class AuthService {
