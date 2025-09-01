@@ -28,6 +28,21 @@ enum ConversionType {
   CUSTOM
 }
 
+enum CampaignStatusType {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum CodeType {
+  QR
+  BARCODE
+  USSD
+  SMS
+  REFERRAL
+}
+
 // ======================
 // AUTHENTICATION MODELS
 // ======================
@@ -38,19 +53,30 @@ model User {
   phone     String?   @map("phone_number")
   name      String?
   avatarUrl String?   @map("img")
+  isBanned  Boolean?  @default(false) @map("is_banned")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
-  campaigns    Campaign[]    @relation("OwnerCampaigns")
-  interactions Interaction[]
-  roles        UserRole[]
-  conversions  Conversion[]
+  campaigns           Campaign[]           @relation("OwnerCampaigns")
+  interactions        Interaction[]
+  roles               UserRole[]
+  conversions         Conversion[]
+  adminLogs           AdminLog[]
+  blockedFingerprints BlockedFingerprint[]
 
   @@index([email])
   @@index([phone])
   @@map("users")
+}
+
+model Influencer {
+  id               String             @id @default(cuid())
+  name             String
+  handle           String?            @unique
+  campaigns        Campaign[]
+  influencerMetrics InfluencerMetric[]
 }
 
 model Role {
@@ -76,34 +102,40 @@ model UserRole {
 // CAMPAIGN MODELS
 // ======================
 model Campaign {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   name        String
-  description String?  @default("")
-  budget      Float?   @default(0)
+  description String?            @default("")
+  budget      Float?             @default(0)
   target      Json?
-  medium      String   @map("type")
-  actions     String[] @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
+  medium      String             @map("type")
+  //actions     String[]           @default(["SIGNUP", "PURCHASE", "DOWNLOAD"])
+  actions     ConversionType[]   @default([SIGNUP, PURCHASE, DOWNLOAD])
   webhookUrl  String?
+  status      CampaignStatusType @default(DRAFT)
 
   // Foreign keys
-  channelId String
-  ownerId   String
-  regionId  String
+  channelId    String
+  ownerId      String
+  regionId     String
+  influencerId String?
 
   // Timestamps
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  startDate DateTime  @default(now()) @map("start_date") @db.Timestamptz(6)
-  endDate   DateTime  @default(now()) @map("end_date") @db.Timestamptz(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  startDate  DateTime  @default(now()) @map("start_date") @db.Timestamptz(6)
+  endDate    DateTime  @default(now()) @map("end_date") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
 
   // Relations
-  channel     Channel      @relation(fields: [channelId], references: [id])
-  owner       User         @relation("OwnerCampaigns", fields: [ownerId], references: [id])
-  codes       Code[]
-  geoLifts    GeoLift[]
-  funnelSteps FunnelStep[]
-  region      Region       @relation(fields: [regionId], references: [id])
-  reportLogs  ReportLog[]
+  channel          Channel            @relation(fields: [channelId], references: [id])
+  owner            User               @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  codes            Code[]
+  geoLifts         GeoLift[]
+  funnelSteps      FunnelStep[]
+  region           Region             @relation(fields: [regionId], references: [id])
+  reportLogs       ReportLog[]
+  influencers      Influencer?        @relation(fields: [influencerId], references: [id])
+  influencerMetrics InfluencerMetric[]
 
   @@index([channelId, ownerId, regionId, createdAt])
   @@map("campaigns")
@@ -146,10 +178,11 @@ model Region {
 // TRACKING MODELS
 // ======================
 model Code {
-  id         String  @id @default(cuid())
-  code       String  @unique
+  id         String   @id @default(cuid())
+  code       String   @unique
   campaignId String
   qrUrl      String?
+  type       CodeType @default(QR)
 
   // Timestamps
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -180,15 +213,28 @@ model GeoLift {
 }
 
 model FunnelStep {
-  id         String   @id @default(uuid())
-  name       String   @map("step") // Renamed for clarity
-  order      Int
-  campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  id           String        @id @default(uuid())
+  name         String        @map("step") // Renamed for clarity
+  order        Int
+  campaignId   String
+  campaign     Campaign      @relation(fields: [campaignId], references: [id])
+  interactions Interaction[]
 
   @@unique([campaignId, order])
   @@index([campaignId])
   @@map("funnel_steps")
+}
+
+model InfluencerMetric {
+  id           String     @id @default(cuid())
+  influencerId String
+  campaignId   String
+  impressions  Int
+  clicks       Int
+  engagement   Float
+  createdAt    DateTime   @default(now())
+  influencer   Influencer @relation(fields: [influencerId], references: [id])
+  campaign     Campaign   @relation(fields: [campaignId], references: [id])
 }
 
 // ======================
@@ -205,20 +251,33 @@ model Interaction {
   email        String?
   userMetadata Json?
 
-  // Tracking
-  codeId    String
-  metadata  Json?
-  timestamp DateTime @default(now()) @map("timestamp") @db.Timestamptz(6)
+  // Tracking core
+  codeId       String
+  funnelStepId String?
+  timestamp    DateTime @default(now()) @map("timestamp") @db.Timestamptz(6)
+
+  // Extended tracking (for attribution & analytics)
+  source       String?   // e.g., utm_source = google, facebook, influencer123
+  medium       String?   // e.g., utm_medium = cpc, email, referral
+  campaignName String?   // e.g., utm_campaign = spring_sale
+  referrer     String?   // e.g., https://example.com/page
+  device       String?   // e.g., mobile, desktop, tablet
+  location     String?   // optional fallback if no GeoLift
+  metadata     Json?     // free-form tracking data
 
   // Relations
   code            Code                    @relation(fields: [codeId], references: [id])
   user            User?                   @relation(fields: [userId], references: [id])
+  funnelStep      FunnelStep?             @relation(fields: [funnelStepId], references: [id])
   conversionLinks ConversionInteraction[]
 
   @@index([userId, codeId, timestamp])
   @@index([fingerprint])
+  @@index([source])
+  @@index([medium])
   @@map("interactions")
 }
+
 
 model Conversion {
   id          String         @id @default(cuid())
@@ -250,8 +309,20 @@ model ConversionInteraction {
   @@map("conversion_interactions")
 }
 
+model BlockedFingerprint {
+  id          String    @id @default(cuid())
+  fingerprint String    @unique
+  reason      String?
+  blockedById String?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  blockedBy   User?     @relation(fields: [blockedById], references: [id])
+
+  @@map("blocked_fingerprints")
+}
+
 // ======================
-// INTERACTION MODELS
+// AUDITING MODELS
 // ======================
 model ReportLog {
   id         String   @id @default(cuid())
@@ -266,4 +337,20 @@ model ReportLog {
   userId     String? // Nullable for scheduled jobs
 
   @@map("report_logs")
+}
+
+model AdminLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  //relation
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@map("admin_logs")
 }

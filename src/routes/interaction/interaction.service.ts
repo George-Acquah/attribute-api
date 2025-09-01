@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
 import { _IFingerprintWithMeta } from 'src/shared/interfaces/interactions.interface';
 import {
-  InternalServerErrorResponse,
   NotFoundResponse,
   OkResponse,
-} from 'src/shared/res/api.response';
+  InternalServerErrorResponse,
+} from 'src/shared/res/responses';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 
 @Injectable()
@@ -30,7 +31,7 @@ export class InteractionService {
         return new NotFoundResponse('Code not found');
       }
 
-      await this.prisma.interaction.create({
+      const interaction = await this.prisma.interaction.create({
         data: {
           codeId: codeEntity.id,
           userId: userId ?? undefined,
@@ -41,7 +42,13 @@ export class InteractionService {
         },
       });
 
-      return new OkResponse(true, 'Interaction tracked.');
+      return new OkResponse(
+        {
+          interactionId: interaction.id,
+          code: interaction.codeId,
+        },
+        'Interaction tracked.',
+      );
     } catch (error) {
       this.logger.error('Error In Track Interaction: ', error);
 

@@ -1,4 +1,6 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Inject } from '@nestjs/common/decorators/core/inject.decorator';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
 import { RedisClient } from 'src/shared/interfaces/redis.interface';
 import { REDIS_CLIENT } from 'src/shared/providers/redis.provider';
 

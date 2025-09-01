@@ -1,11 +1,3 @@
-import { applyDecorators, HttpStatus, Type } from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiExtraModels,
-  ApiOkResponse,
-  ApiResponse,
-  getSchemaPath,
-} from '@nestjs/swagger';
 import {
   SwaggerOkResponse,
   SwaggerCreatedResponse,
@@ -15,6 +7,16 @@ import {
   SwaggerInternalServerErrorResponse,
 } from '../dtos/swagger-responses.dto';
 import { MetaDto, SwaggerPaginatedDto } from '../dtos/pagination.dto';
+import { applyDecorators } from '@nestjs/common/decorators/core/apply-decorators';
+import { HttpStatus } from '@nestjs/common/enums/http-status.enum';
+import { Type } from '@nestjs/common/interfaces/type.interface';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiResponse,
+} from '@nestjs/swagger/dist/decorators/api-response.decorator';
+import { ApiExtraModels } from '@nestjs/swagger/dist/decorators/api-extra-models.decorator';
+import { getSchemaPath } from '@nestjs/swagger/dist/utils/get-schema-path.util';
 
 export function ApiGlobalResponses() {
   return applyDecorators(

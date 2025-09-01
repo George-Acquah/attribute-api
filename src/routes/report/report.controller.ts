@@ -7,7 +7,6 @@ import {
   HttpException,
   HttpStatus,
   Query,
-  Logger,
 } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { Response } from 'express';
@@ -18,10 +17,10 @@ import { IReportLogFilter } from 'src/shared/interfaces/report.interface';
 import { GetLogsDto } from './dtos/get-report.dto';
 import { instanceToPlain } from 'class-transformer';
 import { ReportStatus } from 'src/shared/enums/reports.enums';
+import { DatesParams } from 'src/shared/dtos/pagination.dto';
 
 @Controller('reports')
 export class ReportController {
-  private readonly logger = new Logger(ReportController.name);
   constructor(
     private readonly reportService: ReportService,
     private readonly bullService: BullService,
@@ -39,6 +38,11 @@ export class ReportController {
     );
 
     return logs;
+  }
+
+  @Get('summary')
+  async getReportSummary(@Query() dto?: DatesParams) {
+    return await this.reportService.getReportSummary(instanceToPlain(dto));
   }
 
   @Post(':campaignId/generate')

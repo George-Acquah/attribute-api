@@ -1,4 +1,5 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { createParamDecorator } from '@nestjs/common/decorators/http/create-route-param-metadata.decorator';
+import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-context.interface';
 import { Request } from 'express';
 
 export const CurrentUser = createParamDecorator(

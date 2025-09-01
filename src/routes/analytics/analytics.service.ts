@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
 import {
   InternalServerErrorResponse,
   OkResponse,
-} from 'src/shared/res/api.response';
+} from 'src/shared/res/responses';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 
 @Injectable()

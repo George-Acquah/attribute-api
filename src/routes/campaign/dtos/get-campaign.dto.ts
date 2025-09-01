@@ -31,6 +31,7 @@ export const CampaignDto = generateDtoClassFromType<Campaign>(
     regionId: '',
     startDate: new Date(),
     webhookUrl: '',
+    archivedAt: new Date(),
   },
   'CampaignsDto',
 );

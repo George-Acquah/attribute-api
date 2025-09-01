@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject } from '@nestjs/common/decorators/core/inject.decorator';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { FirebaseAdmin } from 'src/shared/interfaces/firebase.interface';
 import { FIREBASE_ADMIN } from 'src/shared/providers/firebase-admin.provider';

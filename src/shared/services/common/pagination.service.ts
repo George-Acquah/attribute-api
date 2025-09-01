@@ -1,8 +1,5 @@
-import {
-  HttpStatus,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { HttpStatus } from '@nestjs/common/enums/http-status.enum';
 import { _IPaginationMeta } from 'src/shared/interfaces/responses.interface';
 import { PaginatedResponse } from 'src/shared/res/paginated.response';
 
@@ -81,7 +78,12 @@ export class PaginationService {
       );
     } catch (error) {
       console.error('PaginationService Error:', error);
-      throw new InternalServerErrorException('Failed to fetch paginated data');
+      return new PaginatedResponse<null>(
+        HttpStatus.OK,
+        null,
+        null,
+        'Failed to fetch paginated data',
+      );
     }
   }
 }

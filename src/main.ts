@@ -7,9 +7,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ApiResponseInterceptor } from './shared/interceptors/api-response.interceptor';
 async function bootstrap() {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
     const app = await NestFactory.create(AppModule, {
       logger: new ConsoleLogger('Bootstrap', {
-        logLevels: ['log', 'error', 'warn'],
+        logLevels: isProduction ? ['error'] : ['log', 'error', 'warn'],
         timestamp: true,
       }),
     });
@@ -17,9 +18,8 @@ async function bootstrap() {
     //Get the ConfigService
     const configService = app.get(ConfigService);
     const port = parseInt(configService.get('PORT')) || 3300;
-    const isProduction = process.env.NODE_ENV === 'production';
 
-    const globalPrefix = 'api';
+    const globalPrefix = 'api/v1';
     app.setGlobalPrefix(globalPrefix);
     app.useGlobalInterceptors(new ApiResponseInterceptor());
     app.use(cookieParser());
@@ -29,7 +29,7 @@ async function bootstrap() {
         ? [
             'https://attribute-kappa.vercel.app',
             'https://attribute-api1.onrender.com',
-            `http://localhost:${port}`,
+            `https://localhost:${port}`,
           ]
         : [
             `http://localhost:${port}`,
@@ -52,11 +52,15 @@ async function bootstrap() {
       .setDescription('API documentation for Attribution')
       .setVersion('1.0')
       .addBearerAuth()
-      .setContact('Attribution', '#', 'support@firebase-test.com')
+      .setContact('Attribution', '#', 'attribute-api.com')
       .setLicense('MIT', 'https://opensource.org/licenses/MIT')
       .setTermsOfService('#')
-      .addServer('http://localhost:' + port, 'Local development server')
-      .addServer('https://attribute-api1.onrender.com', 'Production server')
+      .addServer(
+        isProduction
+          ? 'https://attribute-api1.onrender.com'
+          : 'http://localhost:' + port,
+        isProduction ? 'Production server' : 'Local development server',
+      )
       .addTag('Auth', 'Authentication and user management')
       .addTag('Users', 'User profiles and roles')
       .addTag('Campaigns', 'Campaign creation, targeting, and management')
@@ -72,7 +76,7 @@ async function bootstrap() {
       .build();
 
     const document = () => SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/docs', app, document, {
+    SwaggerModule.setup('api/v1/docs', app, document, {
       swaggerOptions: {
         docExpansion: 'none',
         persistAuthorization: true,

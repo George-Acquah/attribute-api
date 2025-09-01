@@ -33,33 +33,8 @@ export class ScheduledTasksService {
     });
 
     for (const campaign of campaigns) {
-      try {
-        const filePath = await this.reports.generatePDF(campaign.id);
-
-        await this.prisma.reportLog.create({
-          data: {
-            campaignId: campaign.id,
-            filePath: filePath.data,
-            fileName: `${campaign.id}.pdf`,
-            status: 'success',
-          },
-        });
-
-        console.log(`[✅] Report for ${campaign.name} at ${filePath}`);
-      } catch (err) {
-        await this.prisma.reportLog.create({
-          data: {
-            campaignId: campaign.id,
-            status: 'failed',
-            error: err.message,
-            filePath: '',
-            fileName: '',
-          },
-        });
-
-        console.error(`[❌] Failed for ${campaign.name}: ${err.message}`);
-        throw err; // Re-throw to log the error
-      }
+      this.logger.log(`Generating report for campaign ${campaign.id}`);
+      await this.reports.generateAndSaveReport(campaign.id);
     }
   }
 }

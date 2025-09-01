@@ -1,8 +1,8 @@
 import { Controller, Delete, Get, HttpStatus, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { OkResponse } from 'src/shared/res/api.response';
 import { RedisService } from 'src/shared/services/redis/redis.service';
 import { ApiTags } from '@nestjs/swagger';
+import { OkResponse } from 'src/shared/res/responses/ok.response';
 
 @ApiTags('Redis')
 @Controller('redis')

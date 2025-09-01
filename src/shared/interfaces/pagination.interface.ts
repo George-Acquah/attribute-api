@@ -4,7 +4,11 @@ export interface _IPaginationParams {
   query?: string;
 }
 
-export interface _IPaginationWithDatesParams extends _IPaginationParams {
+export interface _IDatesParams {
   startDate?: Date;
   endDate?: Date;
 }
+
+export interface _IPaginationWithDatesParams
+  extends _IPaginationParams,
+    _IDatesParams {}

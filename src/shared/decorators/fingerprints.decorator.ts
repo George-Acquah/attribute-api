@@ -1,4 +1,4 @@
-import { createParamDecorator } from '@nestjs/common';
+import { createParamDecorator } from '@nestjs/common/decorators/http/create-route-param-metadata.decorator';
 import { Request } from 'express';
 
 type Data = 'all' | 'meta' | 'fingerprint';
