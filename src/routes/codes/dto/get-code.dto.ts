@@ -9,6 +9,7 @@ export const CodeDto = generateDtoClassFromType<Code>(
     createdAt: new Date(),
     deletedAt: new Date(),
     qrUrl: '',
+    type: 'QR',
   },
   'CodeDto',
 );

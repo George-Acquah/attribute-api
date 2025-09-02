@@ -32,6 +32,8 @@ export const CampaignDto = generateDtoClassFromType<Campaign>(
     startDate: new Date(),
     webhookUrl: '',
     archivedAt: new Date(),
+    status: 'DRAFT',
+    influencerId: '',
   },
   'CampaignsDto',
 );
