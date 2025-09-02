@@ -153,7 +153,7 @@ model Channel {
 // GEOGRAPHICAL MODELS
 // ======================
 model Country {
-  id      String   @id @default(uuid())
+  id      String   @id @default(cuid())
   name    String   @unique
   code    String?  @unique // Adding country code (e.g., "US", "GB")
   regions Region[]
@@ -162,7 +162,7 @@ model Country {
 }
 
 model Region {
-  id        String     @id @default(uuid())
+  id        String     @id @default(cuid())
   name      String
   countryId String
   country   Country    @relation(fields: [countryId], references: [id])
@@ -197,7 +197,7 @@ model Code {
 }
 
 model GeoLift {
-  id         String @id @default(uuid())
+  id         String @id @default(cuid())
   upliftPct  Float
   keyDriver  String
   campaignId String
