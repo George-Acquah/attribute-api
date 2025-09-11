@@ -54,19 +54,19 @@ async function main() {
       role: 'user',
       action: 'read',
       subject: 'User',
-      conditions: { ownerId: '${user.id}' },
+      conditions: { id: '${user.id}' },
     },
     {
       role: 'user',
       action: 'update',
       subject: 'Campaign',
-      conditions: { ownerId: '${user.id}' },
+      conditions: { id: '${user.id}' },
     },
     {
       role: 'user',
       action: 'delete',
       subject: 'Campaign',
-      conditions: { ownerId: '${user.id}' },
+      conditions: { id: '${user.id}' },
     },
   ];
 

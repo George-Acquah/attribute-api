@@ -8,6 +8,8 @@ import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator'
 import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
 import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception';
 import { Logger } from '@nestjs/common/services/logger.service';
+import { CaslAbilityFactory } from 'src/shared/providers/casl.provider';
+import { accessibleBy } from '@casl/prisma';
 
 @Injectable()
 export class UsersService {
@@ -28,6 +30,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private readonly paginationService: PaginationService,
+    private readonly caslAbilityFactory: CaslAbilityFactory,
   ) {}
   async findByUid(uid: string, uidBool = true): Promise<_ISafeUser> {
     try {
@@ -58,18 +61,27 @@ export class UsersService {
     return 'This action adds a new user';
   }
 
-  async findAll(dto: _IPaginationParams) {
+  async findAll(dto: _IPaginationParams, user: _ISafeUser) {
+    const ability = await this.caslAbilityFactory.createForUser(user);
+
+    const where = accessibleBy(ability).User;
+
     return await this.paginationService.paginateAndFilter<
       User,
       Prisma.UserWhereInput,
-      Prisma.UserInclude,
-      Prisma.UserOrderByWithRelationInput
+      unknown,
+      Prisma.UserOrderByWithRelationInput,
+      Prisma.UserSelect
     >(this.prisma.user, {
       ...dto,
       searchFields: ['email', 'name'],
       searchValue: dto.query,
-      // where: { isActive: true },
-      include: { campaigns: true },
+      where,
+      select: {
+        ...this.userSessionSelect,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 

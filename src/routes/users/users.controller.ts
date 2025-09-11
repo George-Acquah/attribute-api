@@ -30,6 +30,7 @@ import {
   Param,
 } from '@nestjs/common/decorators/http/route-params.decorator';
 import { RequirePermission } from 'src/shared/decorators/require-permission.decorator';
+import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 
 const CONTROLLER_PATH = 'users';
 @ApiTags('Users')
@@ -53,8 +54,11 @@ export class UsersController {
   @ApiPaginatedResponse(UserDto)
   @RequirePermission(Action.Read, 'User')
   @Get()
-  async findAll(@Query() pagination: PaginationParams) {
-    return await this.usersService.findAll(pagination);
+  async findAll(
+    @Query() pagination: PaginationParams,
+    @CurrentUser() user: _ISafeUser,
+  ) {
+    return await this.usersService.findAll(pagination, user);
   }
 
   @Get(':id')
