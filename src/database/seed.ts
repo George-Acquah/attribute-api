@@ -3,18 +3,109 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  // ======================
+  // Seed Roles
+  // ======================
   const roles = ['admin', 'manager', 'user'];
-  console.log(roles);
+  const roleRecords: Record<string, any> = {};
 
   for (const role of roles) {
-    await prisma.role.upsert({
+    const record = await prisma.role.upsert({
       where: { name: role },
       update: {},
       create: { name: role },
     });
+    roleRecords[role] = record;
   }
 
+  console.log('Seeded roles:', roles);
+
+  // ======================
+  // Seed Role Permissions
+  // ======================
+  // Seed role permissions
+  const rolePermissions: {
+    role: string;
+    action: string;
+    subject: string;
+    conditions?: Record<string, any>;
+  }[] = [
+    { role: 'admin', action: 'manage', subject: 'all' },
+
+    { role: 'manager', action: 'read', subject: 'all' },
+    { role: 'manager', action: 'create', subject: 'Campaign' },
+    // Manager can update/delete only campaigns they own
+    {
+      role: 'manager',
+      action: 'update',
+      subject: 'Campaign',
+      conditions: { ownerId: '${user.id}' }, // placeholder, CASL will replace
+    },
+    {
+      role: 'manager',
+      action: 'delete',
+      subject: 'Campaign',
+      conditions: { ownerId: '${user.id}' },
+    },
+
+    { role: 'user', action: 'read', subject: 'Campaign' },
+    { role: 'user', action: 'read', subject: 'Code' },
+    {
+      role: 'user',
+      action: 'read',
+      subject: 'User',
+      conditions: { ownerId: '${user.id}' },
+    },
+    {
+      role: 'user',
+      action: 'update',
+      subject: 'Campaign',
+      conditions: { ownerId: '${user.id}' },
+    },
+    {
+      role: 'user',
+      action: 'delete',
+      subject: 'Campaign',
+      conditions: { ownerId: '${user.id}' },
+    },
+  ];
+
+  for (const perm of rolePermissions) {
+    const role = await prisma.role.findUnique({
+      where: { name: perm.role },
+    });
+
+    if (!role) continue;
+
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_action_subject: {
+          roleId: role.id,
+          action: perm.action,
+          subject: perm.subject,
+        },
+      },
+      update: {
+        conditions: perm.conditions
+          ? JSON.stringify(perm.conditions)
+          : undefined,
+      },
+      create: {
+        roleId: role.id,
+        action: perm.action,
+        subject: perm.subject,
+        conditions: perm.conditions
+          ? JSON.stringify(perm.conditions)
+          : undefined,
+      },
+    });
+  }
+
+  console.log('Seeded role permissions');
+
+  // ======================
   // Seed Channels
+  // ======================
   const channels = await Promise.all([
     prisma.channel.upsert({
       where: { name: 'TV' },
@@ -48,32 +139,20 @@ async function main() {
     channels.map((c) => c.name),
   );
 
-  // Seed Countries
-  const countries = await Promise.all([
-    prisma.country.upsert({
-      where: { name: 'Ghana' },
-      update: {},
-      create: {
-        name: 'Ghana',
-        code: 'GH',
-      },
-    }),
-    prisma.country.upsert({
-      where: { name: 'Nigeria' },
-      update: {},
-      create: {
-        name: 'Nigeria',
-        code: 'NG',
-      },
-    }),
-  ]);
+  // ======================
+  // Seed Countries & Regions
+  // ======================
+  const ghana = await prisma.country.upsert({
+    where: { name: 'Ghana' },
+    update: {},
+    create: { name: 'Ghana', code: 'GH' },
+  });
+  const nigeria = await prisma.country.upsert({
+    where: { name: 'Nigeria' },
+    update: {},
+    create: { name: 'Nigeria', code: 'NG' },
+  });
 
-  console.log(
-    'Seeded countries:',
-    countries.map((c) => c.name),
-  );
-
-  // Seed Ghana Regions (16)
   const ghanaRegions = [
     'Ahafo',
     'Ashanti',
@@ -96,22 +175,13 @@ async function main() {
   await Promise.all(
     ghanaRegions.map((region) =>
       prisma.region.upsert({
-        where: {
-          name_countryId: {
-            name: region,
-            countryId: countries[0].id, // Ghana
-          },
-        },
+        where: { name_countryId: { name: region, countryId: ghana.id } },
         update: {},
-        create: {
-          name: region,
-          countryId: countries[0].id,
-        },
+        create: { name: region, countryId: ghana.id },
       }),
     ),
   );
 
-  // Seed Nigeria States (36 + FCT)
   const nigeriaStates = [
     'Abia',
     'Adamawa',
@@ -155,24 +225,16 @@ async function main() {
   await Promise.all(
     nigeriaStates.map((state) =>
       prisma.region.upsert({
-        where: {
-          name_countryId: {
-            name: state,
-            countryId: countries[1].id, // Nigeria
-          },
-        },
+        where: { name_countryId: { name: state, countryId: nigeria.id } },
         update: {},
-        create: {
-          name: state,
-          countryId: countries[1].id,
-        },
+        create: { name: state, countryId: nigeria.id },
       }),
     ),
   );
 
-  console.log('Seeded:');
-  console.log(`- ${ghanaRegions.length} Ghana regions`);
-  console.log(`- ${nigeriaStates.length} Nigeria states`);
+  console.log(
+    `Seeded: ${ghanaRegions.length} Ghana regions, ${nigeriaStates.length} Nigeria states`,
+  );
 }
 
 main()

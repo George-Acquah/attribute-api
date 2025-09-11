@@ -47,16 +47,17 @@ enum CodeType {
 // AUTHENTICATION MODELS
 // ======================
 model User {
-  id        String    @id @default(cuid())
-  uid       String    @unique
-  email     String?   @unique
-  phone     String?   @map("phone_number")
-  name      String?
-  avatarUrl String?   @map("img")
-  isBanned  Boolean?  @default(false) @map("is_banned")
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id           String    @id @default(cuid())
+  uid          String?   @unique
+  email        String?   @unique
+  phone        String?   @map("phone_number")
+  name         String?
+  avatarUrl    String?   @map("img")
+  passwordHash String?   @map("password_hash")
+  isBanned     Boolean?  @default(false) @map("is_banned")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
   campaigns           Campaign[]           @relation("OwnerCampaigns")
@@ -65,6 +66,7 @@ model User {
   conversions         Conversion[]
   adminLogs           AdminLog[]
   blockedFingerprints BlockedFingerprint[]
+  authProviders       UserAuthProvider[]
 
   @@index([email])
   @@index([phone])
@@ -72,10 +74,10 @@ model User {
 }
 
 model Influencer {
-  id               String             @id @default(cuid())
-  name             String
-  handle           String?            @unique
-  campaigns        Campaign[]
+  id                String             @id @default(cuid())
+  name              String
+  handle            String?            @unique
+  campaigns         Campaign[]
   influencerMetrics InfluencerMetric[]
 }
 
@@ -84,8 +86,27 @@ model Role {
   name        String     @unique
   description String?
   users       UserRole[]
+  rolePermissions RolePermission[]
 
   @@map("roles")
+}
+
+model RolePermission {
+  id         String   @id @default(cuid())
+  action     String
+  subject    String
+  // optional JSON conditions object, e.g. { "ownerId": "$user.id" }
+  conditions Json?    
+
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id])
+
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([roleId, action, subject], name: "roleId_action_subject")
+  @@index([roleId])
+  @@map("role_permissions")
 }
 
 model UserRole {
@@ -127,14 +148,14 @@ model Campaign {
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
 
   // Relations
-  channel          Channel            @relation(fields: [channelId], references: [id])
-  owner            User               @relation("OwnerCampaigns", fields: [ownerId], references: [id])
-  codes            Code[]
-  geoLifts         GeoLift[]
-  funnelSteps      FunnelStep[]
-  region           Region             @relation(fields: [regionId], references: [id])
-  reportLogs       ReportLog[]
-  influencers      Influencer?        @relation(fields: [influencerId], references: [id])
+  channel           Channel            @relation(fields: [channelId], references: [id])
+  owner             User               @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  codes             Code[]
+  geoLifts          GeoLift[]
+  funnelSteps       FunnelStep[]
+  region            Region             @relation(fields: [regionId], references: [id])
+  reportLogs        ReportLog[]
+  influencers       Influencer?        @relation(fields: [influencerId], references: [id])
   influencerMetrics InfluencerMetric[]
 
   @@index([channelId, ownerId, regionId, createdAt])
@@ -257,13 +278,13 @@ model Interaction {
   timestamp    DateTime @default(now()) @map("timestamp") @db.Timestamptz(6)
 
   // Extended tracking (for attribution & analytics)
-  source       String?   // e.g., utm_source = google, facebook, influencer123
-  medium       String?   // e.g., utm_medium = cpc, email, referral
-  campaignName String?   // e.g., utm_campaign = spring_sale
-  referrer     String?   // e.g., https://example.com/page
-  device       String?   // e.g., mobile, desktop, tablet
-  location     String?   // optional fallback if no GeoLift
-  metadata     Json?     // free-form tracking data
+  source       String? // e.g., utm_source = google, facebook, influencer123
+  medium       String? // e.g., utm_medium = cpc, email, referral
+  campaignName String? // e.g., utm_campaign = spring_sale
+  referrer     String? // e.g., https://example.com/page
+  device       String? // e.g., mobile, desktop, tablet
+  location     String? // optional fallback if no GeoLift
+  metadata     Json? // free-form tracking data
 
   // Relations
   code            Code                    @relation(fields: [codeId], references: [id])
@@ -277,7 +298,6 @@ model Interaction {
   @@index([medium])
   @@map("interactions")
 }
-
 
 model Conversion {
   id          String         @id @default(cuid())
@@ -353,4 +373,16 @@ model AdminLog {
 
   @@index([adminId])
   @@map("admin_logs")
+}
+
+model UserAuthProvider {
+  id         String   @id @default(cuid())
+  provider   String
+  providerId String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([provider, providerId])
+  @@map("user_auth_providers")
 }

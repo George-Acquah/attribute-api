@@ -1,4 +1,3 @@
-import { Module } from '@nestjs/common';
 import { AuthModule } from './routes/auth/auth.module';
 import { FirebaseAdminModule } from './shared/modules/firebase-admin.module';
 import { ConfigModule } from '@nestjs/config';
@@ -13,13 +12,18 @@ import { ConversionModule } from './routes/conversion/conversion.module';
 import { AttributionModule } from './routes/attribution/attribution.module';
 import { AnalyticsModule } from './routes/analytics/analytics.module';
 import { ReportModule } from './routes/report/report.module';
+import { SessionProviderModule } from './shared/modules/session.module';
+import { Module } from '@nestjs/common/decorators/modules/module.decorator';
+import { ThrottleModule } from './shared/modules/throttle.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     FirebaseAdminModule,
+    SessionProviderModule,
     PrismaModule,
     RedisModule,
+    ThrottleModule,
     AuthModule,
     CampaignModule,
     UsersModule,
@@ -30,7 +34,6 @@ import { ReportModule } from './routes/report/report.module';
     AnalyticsModule,
     ReportModule,
   ],
-  providers: [],
   controllers: [RedisController],
 })
 export class AppModule {}

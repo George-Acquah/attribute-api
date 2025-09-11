@@ -1,10 +1,11 @@
-import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ConsoleLogger, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ApiResponseInterceptor } from './shared/interceptors/api-response.interceptor';
+import { ConsoleLogger } from '@nestjs/common/services/console-logger.service';
+import { NestFactory } from '@nestjs/core/nest-factory';
+import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 async function bootstrap() {
   try {
     const isProduction = process.env.NODE_ENV === 'production';

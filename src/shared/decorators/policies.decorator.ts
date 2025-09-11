@@ -1,7 +1,5 @@
 import { SetMetadata } from '@nestjs/common/decorators/core/set-metadata.decorator';
-import { AppAbility } from '../providers/casl.provider';
-
-export type PolicyHandler = (ability: AppAbility) => boolean;
+import { PolicyHandler } from '../interfaces/policies.interface';
 
 export const CHECK_POLICIES_KEY = 'check_policies';
 

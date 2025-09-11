@@ -39,7 +39,7 @@ export class FirebaseAuthGuard implements CanActivate {
       const uid = decoded.uid;
 
       // 2. Try to fetch user info from Redis
-      const redisKey = `${RedisKeyPrefixes.FIREBASE_GUARD_USER_KEY}${uid}`;
+      const redisKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${uid}`;
       const userData = await this.redisService.get<_ISafeUser>(redisKey);
 
       let user: _ISafeUser;

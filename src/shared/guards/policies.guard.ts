@@ -1,47 +1,47 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CaslAbilityFactory } from '../providers/casl.provider';
-import {
-  CHECK_POLICIES_KEY,
-  PolicyHandler,
-} from '../decorators/policies.decorator';
 import { Request } from 'express';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { CanActivate } from '@nestjs/common/interfaces/features/can-activate.interface';
+import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-context.interface';
+import { ForbiddenException } from '@nestjs/common/exceptions/forbidden.exception';
+import {
+  PERMISSION_KEY,
+  PermissionMetadata,
+} from '../decorators/require-permission.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
 
 @Injectable()
 export class PoliciesGuard implements CanActivate {
+  private logger = new Logger(PoliciesGuard.name);
   constructor(
     private reflector: Reflector,
     private caslAbilityFactory: CaslAbilityFactory,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const requiredPolicies =
-      this.reflector.get<PolicyHandler[]>(
-        CHECK_POLICIES_KEY,
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const { action, subject } =
+      this.reflector.get<PermissionMetadata>(
+        PERMISSION_KEY,
         context.getHandler(),
-      ) || [];
+      ) || {};
 
-    if (!requiredPolicies) {
-      return true; // If no policies are required, allow access
-    }
+    // If no permission is specified, allow route by default
+    if (!action || !subject) return true;
 
-    const { user } = context.switchToHttp().getRequest() as Request;
+    const request = context.switchToHttp().getRequest<Request>();
+    const user = request.user;
 
-    const ability = this.caslAbilityFactory.createForUser(user);
+    const ability = await this.caslAbilityFactory.createForUser(user);
 
-    const policyHandlers = requiredPolicies.map((policy) => policy(ability));
-
-    // If any policy check fails, deny access
-    if (policyHandlers.some((can) => !can)) {
+    if (!ability.can(action, subject)) {
       throw new ForbiddenException(
-        'You do not have permission to perform this action',
+        `You do not have permission to ${action} ${subject}`,
       );
     }
+    this.logger.log(
+      `App ability rules: ${JSON.stringify(ability.rules, null, 2)}`,
+    );
 
     return true;
   }

@@ -12,27 +12,31 @@ import { Logger } from '@nestjs/common/services/logger.service';
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
+  private readonly userSessionSelect = {
+    id: true,
+    email: true,
+    roles: {
+      select: {
+        role: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    },
+  };
   constructor(
     private prisma: PrismaService,
     private readonly paginationService: PaginationService,
   ) {}
-  async findByUid(uid: string) {
+  async findByUid(uid: string, uidBool = true): Promise<_ISafeUser> {
     try {
+      const whereClause: Prisma.UserWhereUniqueInput = uidBool
+        ? { uid }
+        : { id: uid };
       const rawUser = await this.prisma.user.findUnique({
-        where: { uid },
-        select: {
-          id: true,
-          email: true,
-          roles: {
-            select: {
-              role: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
+        where: whereClause,
+        select: this.userSessionSelect,
       });
 
       if (!rawUser) throw new NotFoundException('User does not exist');
@@ -48,6 +52,7 @@ export class UsersService {
       throw new InternalServerErrorException();
     }
   }
+
   create(createUserDto: CreateUserDto) {
     void createUserDto;
     return 'This action adds a new user';

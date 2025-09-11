@@ -26,7 +26,7 @@ export class LocalAuthGuard implements CanActivate {
       const decoded = await this.admin.verifySessionCookie(sessionCookie);
       const uid = decoded.uid;
 
-      const redisKey = `${RedisKeyPrefixes.FIREBASE_GUARD_USER_KEY}${uid}`;
+      const redisKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${uid}`;
       const userData = await this.redisService.get<_ISafeUser>(redisKey);
 
       let user: _ISafeUser | null;
