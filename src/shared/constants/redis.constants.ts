@@ -1,3 +1,5 @@
 export const RedisKeyPrefixes = {
-  FIREBASE_GUARD_USER_KEY: 'user:role:',
+  FIREBASE_SESSION: 'session:firebase:',
+  CUSTOM_SESSION: 'session:custom:',
+  SESSION_USER_KEY: 'session:user:',
 };

@@ -1,61 +1,107 @@
-import { PureAbility, AbilityBuilder, ExtractSubjectType } from '@casl/ability';
-import { Injectable } from '@nestjs/common';
-import { Campaign, Code, User } from '@prisma/client';
+import { AbilityBuilder, ExtractSubjectType } from '@casl/ability';
 import { Action } from '../enums/casl.enums';
-import { createPrismaAbility, PrismaQuery, Subjects } from '@casl/prisma';
-// import { PrismaService } from '../services/prisma/prisma.service';
-
-type AppSubjects =
-  | 'all'
-  | Subjects<{
-      User: User;
-      Campaign: Campaign;
-      Code: Code;
-    }>;
-
-export type AppAbility = PureAbility<[string, AppSubjects], PrismaQuery>;
+import { createPrismaAbility } from '@casl/prisma';
+import { PrismaService } from '../services/prisma/prisma.service';
+import { RedisService } from '../services';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { Logger } from '@nestjs/common/services/logger.service';
+import { AppAbility, AppSubjects } from '../interfaces/casl.interfac';
 
 @Injectable()
 export class CaslAbilityFactory {
-  // constructor(private readonly prisma: PrismaService) {}
-  createForUser(user: _ISafeUser) {
-    const { can, cannot, build } = new AbilityBuilder<AppAbility>(
-      createPrismaAbility,
-    );
+  private readonly logger = new Logger(CaslAbilityFactory.name);
+  private readonly ROLES_CACHE_KEY = 'casl:roles:permissions';
+  private readonly ROLES_CACHE_TTL = 60 * 60 * 24; // 1 day
 
-    // const dbRoles = await this.prisma.role.findMany({
-    //   select: { name: true },
-    // });
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
-    // // Define abilities based on the user's roles
-    // user.roles.forEach((role) => {
-    //   const roleAbilities = dbRoles;
-    //   if (roleAbilities) {
-    //     roleAbilities.forEach((action: string) => {
-    //       can(action as Action, 'all'); // Adjust according to actual resource types
-    //     });
-    //   }
-    // });
+  async createForUser(user: _ISafeUser) {
+    const { can, build } = new AbilityBuilder<AppAbility>(createPrismaAbility);
 
-    if (user.roles.includes('manager')) {
-      can(Action.Manage, 'all');
-    } else if (user.roles.includes('admin')) {
-      can(Action.Read, 'all');
+    // 1. Try cache
+    const rolesData = await this.redis.get<any>(this.ROLES_CACHE_KEY);
+    let rolePermissions: any[];
+
+    if (rolesData) {
+      rolePermissions = rolesData;
     } else {
-      can(Action.Read, 'Campaign');
-      can(Action.Read, 'Code');
-      cannot(Action.Read, 'User');
+      rolePermissions = await this.prisma.rolePermission.findMany({
+        include: { role: true },
+      });
+
+      await this.redis.set(
+        this.ROLES_CACHE_KEY,
+        rolePermissions,
+        this.ROLES_CACHE_TTL,
+      );
     }
 
-    can(Action.Create, 'Code', 'all');
-    can(Action.Create, 'Campaign');
+    // 2. Filter only relevant to current user
+    const userPermissions = rolePermissions.filter((perm) =>
+      user.roles.includes(perm.role.name),
+    );
 
-    can(Action.Update, 'Campaign', 'all', { ownerId: user.id });
-    can(Action.Delete, 'Campaign', 'all', { ownerId: user.id });
+    // 3. Build ability with conditions
+    for (const perm of userPermissions) {
+      const action = perm.action as Action;
+      const subject = perm.subject as ExtractSubjectType<AppSubjects>;
 
-    return build({
-      detectSubjectType: (item) =>
-        item.constructor as unknown as ExtractSubjectType<AppSubjects>,
+      let conditions: Record<string, any> | undefined;
+
+      if (perm.conditions) {
+        try {
+          const parsed =
+            typeof perm.conditions === 'string'
+              ? JSON.parse(perm.conditions)
+              : perm.conditions;
+
+          // Inject dynamic user info (currently only supports ownerId)
+          conditions = Object.fromEntries(
+            Object.entries(parsed).map(([key, value]) => {
+              if (typeof value === 'string' && value.includes('${user.id}')) {
+                return [key, value.replace('${user.id}', user.id)];
+              }
+              return [key, value];
+            }),
+          );
+        } catch (err) {
+          this.logger.error(
+            `Failed to parse conditions for permission ${action} ${subject}: ${perm.conditions}`,
+          );
+        }
+      }
+
+      if (conditions) {
+        can(action, subject, conditions);
+      } else {
+        can(action, subject);
+      }
+    }
+
+    const ability = build({
+      detectSubjectType: (item) => {
+        try {
+          // If the instance explicitly sets a CASL subject type, use it.
+          if (
+            item &&
+            typeof item === 'object' &&
+            '__caslSubjectType__' in item
+          ) {
+            return (item as any)
+              .__caslSubjectType__ as ExtractSubjectType<AppSubjects>;
+          }
+        } catch (e) {
+          // ignore and fallback
+        }
+
+        return item.constructor as unknown as ExtractSubjectType<AppSubjects>;
+      },
     });
+
+    this.logger.log('Final ability rules:', ability.rules);
+    return ability;
   }
 }

@@ -5,11 +5,18 @@ import { PaginatedResponse } from 'src/shared/res/paginated.response';
 
 @Injectable()
 export class PaginationService {
-  async paginateAndFilter<TModel, TWhereInput, TInclude, TOrderBy>(
+  async paginateAndFilter<
+    TModel,
+    TWhereInput,
+    TInclude = unknown,
+    TOrderBy = unknown,
+    TSelect = unknown,
+  >(
     prismaModel: {
       findMany: (args: {
         where?: TWhereInput;
         include?: TInclude;
+        select?: TSelect;
         orderBy?: TOrderBy;
         skip?: number;
         take?: number;
@@ -22,7 +29,8 @@ export class PaginationService {
       searchFields?: (keyof TWhereInput & string)[];
       searchValue?: string;
       where?: TWhereInput;
-      include?: TInclude;
+      include?: TInclude | null;
+      select?: TSelect | null;
       orderBy?: TOrderBy;
       message?: string;
     },
@@ -48,14 +56,25 @@ export class PaginationService {
         } as unknown as TWhereInput;
       }
 
+      // Prisma: include and select are mutually exclusive. Enforce that only one is provided.
+      if (args.include != null && args.select != null) {
+        throw new Error(
+          '`include` and `select` are mutually exclusive; provide only one.',
+        );
+      }
+
+      const findArgs: any = {
+        where,
+        orderBy: args.orderBy ?? ({} as TOrderBy),
+        skip,
+        take: limit,
+      };
+
+      if (args.include != null) findArgs.include = args.include;
+      if (args.select != null) findArgs.select = args.select;
+
       const [data, total] = await Promise.all([
-        prismaModel.findMany({
-          where,
-          include: args.include,
-          orderBy: args.orderBy ?? ({} as TOrderBy),
-          skip,
-          take: limit,
-        }),
+        prismaModel.findMany(findArgs),
         prismaModel.count({ where }),
       ]);
 
@@ -77,12 +96,12 @@ export class PaginationService {
         null,
       );
     } catch (error) {
-      console.error('PaginationService Error:', error);
+      console.error('PaginationService Error:', error?.message ?? error);
       return new PaginatedResponse<null>(
         HttpStatus.OK,
         null,
         null,
-        'Failed to fetch paginated data',
+        error?.message ?? 'Failed to fetch paginated data',
       );
     }
   }

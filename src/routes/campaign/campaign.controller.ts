@@ -17,7 +17,6 @@ import { Action } from 'src/shared/enums/casl.enums';
 import { CreateCampaignDto } from './dtos/create-campaign.dto';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { PaginationParams } from 'src/shared/dtos/pagination.dto';
-import { FirebaseAuthGuard } from 'src/shared/guards/firebase-auth.guard';
 import { UpdateCampaignDto } from './dtos/update-campaign.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import {
@@ -33,6 +32,7 @@ import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { CodeDto } from '../codes/dto/get-code.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { Fingerprint } from 'src/shared/decorators/fingerprints.decorator';
+import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
 
 const CONTROLLER_PATH = 'campaigns';
 @ApiTags('Campaigns')
@@ -40,7 +40,7 @@ const CONTROLLER_PATH = 'campaigns';
 @UseInterceptors(CacheInterceptor)
 @Controller(CONTROLLER_PATH)
 @ApiGlobalResponses()
-@UseGuards(FirebaseAuthGuard, PoliciesGuard)
+@UseGuards(SessionAuthGuard, PoliciesGuard)
 export class CampaignController {
   constructor(private readonly campaignService: CampaignService) {}
 

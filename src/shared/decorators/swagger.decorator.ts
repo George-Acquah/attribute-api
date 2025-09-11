@@ -45,11 +45,12 @@ export function ApiGlobalResponses() {
 
 export const ApiCreatedResponseWithModel = <TModel extends Type<unknown>>(
   model: TModel,
+  description?: string,
 ) =>
   applyDecorators(
     ApiExtraModels(SwaggerCreatedResponse, model),
     ApiCreatedResponse({
-      description: `Created Response Of ${model.name}`,
+      description: description || `Created Response Of ${model.name}`,
       schema: {
         title: `Created Response Of ${model.name}`,
         allOf: [
@@ -66,11 +67,12 @@ export const ApiCreatedResponseWithModel = <TModel extends Type<unknown>>(
 
 export const ApiOkResponseWithModel = <TModel extends Type<unknown>>(
   model: TModel,
+  description?: string,
 ) =>
   applyDecorators(
     ApiExtraModels(SwaggerOkResponse, model),
     ApiOkResponse({
-      description: `Result Response Of ${model.name}`,
+      description: description || `Result Response Of ${model.name}`,
       schema: {
         title: `Result Response Of ${model.name}`,
         allOf: [
@@ -87,11 +89,12 @@ export const ApiOkResponseWithModel = <TModel extends Type<unknown>>(
 
 export const ApiPaginatedResponse = <TModel extends Type<unknown>>(
   model: TModel,
+  description?: string,
 ) =>
   applyDecorators(
     ApiExtraModels(SwaggerPaginatedDto, model),
     ApiOkResponse({
-      description: `Paginated Response Of ${model.name}`,
+      description: description || `Paginated Response Of ${model.name}`,
       schema: {
         title: `Paginated Response Of ${model.name}`,
 

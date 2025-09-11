@@ -15,6 +15,7 @@ export const UserDto = generateDtoClassFromType<User>(
     deletedAt: new Date(),
     phone: '',
     isBanned: false,
+    passwordHash: '',
   },
   'UsersDto',
 );
