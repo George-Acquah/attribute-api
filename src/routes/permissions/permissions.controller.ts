@@ -23,10 +23,12 @@ import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { ConditionPresetInterceptor } from 'src/shared/interceptors/condition-preset.interceptor';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
+import { Session } from 'src/shared/decorators/session.decorator';
 
 @ApiTags('Permissions')
 @ApiBearerAuth()
 @ApiGlobalResponses()
+@Session('admin')
 @UseGuards(SessionAuthGuard, PoliciesGuard)
 @Controller('permissions')
 export class PermissionsController {
