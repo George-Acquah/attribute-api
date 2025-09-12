@@ -1,16 +1,16 @@
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-context.interface';
 import {
   CallHandler,
-  ExecutionContext,
-  Injectable,
   NestInterceptor,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+} from '@nestjs/common/interfaces/features/nest-interceptor.interface';
 import { RedisService } from '../services/redis/redis.service';
 import { from, Observable, tap } from 'rxjs';
 import {
   CACHE_KEY_METADATA,
   CACHE_TTL_METADATA,
 } from '../decorators/cacheable.decorator';
+import { Reflector } from '@nestjs/core/services/reflector.service';
 
 @Injectable()
 export class CacheInterceptor implements NestInterceptor {

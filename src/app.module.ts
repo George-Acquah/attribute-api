@@ -13,6 +13,7 @@ import { AttributionModule } from './routes/attribution/attribution.module';
 import { AnalyticsModule } from './routes/analytics/analytics.module';
 import { ReportModule } from './routes/report/report.module';
 import { SessionProviderModule } from './shared/modules/session.module';
+import { PermissionsModule } from './routes/permissions/permissions.module';
 import { Module } from '@nestjs/common/decorators/modules/module.decorator';
 import { ThrottleModule } from './shared/modules/throttle.module';
 
@@ -33,6 +34,7 @@ import { ThrottleModule } from './shared/modules/throttle.module';
     AttributionModule,
     AnalyticsModule,
     ReportModule,
+    PermissionsModule,
   ],
   controllers: [RedisController],
 })
