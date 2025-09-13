@@ -19,6 +19,10 @@ import { ThrottleModule } from './shared/modules/throttle.module';
 import { AlsModule } from './shared/modules/als.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ContextInterceptor } from './shared/interceptors/async-context.interceptor';
+import { ChannelModule } from './routes/channel/channel.module';
+import { CountryModule } from './routes/country/country.module';
+import { RegionModule } from './routes/region/region.module';
+import { RoleModule } from './routes/role/role.module';
 
 @Module({
   imports: [
@@ -39,6 +43,10 @@ import { ContextInterceptor } from './shared/interceptors/async-context.intercep
     AnalyticsModule,
     ReportModule,
     PermissionsModule,
+    ChannelModule,
+    CountryModule,
+    RegionModule,
+    RoleModule,
   ],
   providers: [
     {
