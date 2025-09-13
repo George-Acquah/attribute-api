@@ -22,7 +22,7 @@ export class AuditService {
     tx?: Prisma.TransactionClient,
   ): Promise<void> {
     const client = tx ?? this.prisma;
-    const adminId = this.context.get('adminId') || 'system';
+    const adminId = this.context.get('adminId') || this.context.get('userId');
     await client.adminLog.create({
       data: {
         ...data,

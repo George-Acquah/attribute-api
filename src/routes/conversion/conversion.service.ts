@@ -6,12 +6,9 @@ import { PrismaTransactionService } from 'src/shared/services/transaction/prisma
 import { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
 import { Logger } from '@nestjs/common/services/logger.service';
-import {
-  BadRequestResponse,
-  NotFoundResponse,
-  OkResponse,
-  InternalServerErrorResponse,
-} from 'src/shared/res/responses';
+import { BadRequestResponse, OkResponse } from 'src/shared/res/responses';
+import { NotFoundException } from '@nestjs/common';
+import { handleError } from 'src/shared/utils/errors';
 
 @Injectable()
 export class ConversionService {
@@ -42,8 +39,6 @@ export class ConversionService {
           },
         });
 
-        this.logger.log('Conversion created:', conversion);
-
         // 2. Attribute conversion inside transaction
         const interactionWhere: Prisma.InteractionWhereInput = userId
           ? { userId }
@@ -56,7 +51,7 @@ export class ConversionService {
         });
 
         if (!interactions.length)
-          return new NotFoundResponse('No recent interactions to attribute');
+          throw new NotFoundException('No recent interactions to attribute');
 
         await tx.conversionInteraction.createMany({
           data: interactions.map((i) => ({
@@ -75,8 +70,12 @@ export class ConversionService {
 
       return new OkResponse(result, 'Conversion created.');
     } catch (err) {
-      this.logger.error('Transaction failed in createConversion', err);
-      return new InternalServerErrorResponse('Failed to create conversion');
+      return handleError(
+        'ConversionService.createConversion',
+        err,
+        'Failed to create conversion',
+        this.logger,
+      );
     }
   }
 }

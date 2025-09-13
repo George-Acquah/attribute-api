@@ -29,6 +29,7 @@ import {
   Res,
 } from '@nestjs/common/decorators/http/route-params.decorator';
 import { HttpStatus } from '@nestjs/common/enums/http-status.enum';
+import { Session } from 'src/shared/decorators/session.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -121,6 +122,7 @@ export class AuthController {
   }
 
   @UseGuards(SessionAuthGuard)
+  @Session('user', 'auth')
   @Throttle()
   @ApiOkResponseWithModel(LoginResponseDto, 'Get current logged in user info')
   @ApiOperation({ summary: 'Get current logged in user info' })

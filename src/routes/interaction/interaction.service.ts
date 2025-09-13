@@ -23,6 +23,7 @@ export class InteractionService {
     fingerprintWithMeta?: _IFingerprintWithMeta;
   }) {
     try {
+      this.logger.log('Tracking interaction for code:', code);
       const codeEntity = await this.prisma.code.findUnique({
         where: { code },
       });

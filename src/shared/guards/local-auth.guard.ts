@@ -1,9 +1,11 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { FirebaseAdminService } from '../services/firebase/firebase-admin.service';
 import { Request } from 'express';
 import { UsersService } from 'src/routes/users/users.service';
 import { RedisService } from '../services/redis/redis.service';
 import { RedisKeyPrefixes } from '../constants/redis.constants';
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { CanActivate } from '@nestjs/common/interfaces/features/can-activate.interface';
+import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-context.interface';
 
 @Injectable()
 export class LocalAuthGuard implements CanActivate {

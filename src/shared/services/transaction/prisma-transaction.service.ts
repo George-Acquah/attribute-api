@@ -3,7 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
 import { Logger } from '@nestjs/common/services/logger.service';
 import {
+  BadRequestException,
   ConflictException,
+  HttpException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common/exceptions';
@@ -19,25 +21,31 @@ export class PrismaTransactionService {
    */
   async run<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
+    foreignKeys?: string,
   ): Promise<T> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         return await callback(tx);
       });
     } catch (err) {
-      this.logger.error('Transaction failed', err);
-      throw this.mapError(err);
+      throw this.mapError(err, foreignKeys);
     }
   }
   /**
    * Map Prisma errors to application-specific errors
    * @param err The error thrown by Prisma
    */
-  private mapError(err: any): Error {
+  private mapError(err: any, foreignKeys?: string): Error {
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       switch (err.code) {
         case 'P2002':
           return new ConflictException('Duplicate entry detected');
+        case 'P2003':
+          return new BadRequestException(
+            `Foreign key constraint failed on the field: ${
+              foreignKeys || 'unknown'
+            }`,
+          );
         case 'P2025':
           return new NotFoundException(
             'Record to update/delete does not exist',
@@ -53,6 +61,10 @@ export class PrismaTransactionService {
       return new InternalServerErrorException(
         'Unknown database error occurred',
       );
+    }
+
+    if (err instanceof HttpException) {
+      return err;
     }
 
     return new InternalServerErrorException(err?.message ?? 'Unexpected error');

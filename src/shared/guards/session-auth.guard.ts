@@ -6,7 +6,10 @@ import { Request } from 'express';
 import { Logger } from '@nestjs/common/services/logger.service';
 import { SessionVerifierService } from '../services/common/session-verifier.service';
 import { Reflector } from '@nestjs/core/services/reflector.service';
-import { SESSION_ROLE_KEY } from '../decorators/session.decorator';
+import {
+  SESSION_GUARD_KEY,
+  SESSION_ROLE_KEY,
+} from '../decorators/session.decorator';
 
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
@@ -17,23 +20,29 @@ export class SessionAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Try to read metadata from the handler first, then fall back to the class
-    // so decorators applied at the class level (e.g. @Session('admin')) are found.
     const role = this.reflector.getAllAndOverride<string>(SESSION_ROLE_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
+    const guardType = this.reflector.getAllAndOverride<'local' | 'auth'>(
+      SESSION_GUARD_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
     const request = context.switchToHttp().getRequest<Request>();
 
     try {
-      const user = await this.sessionVerifier.verifyUserFromRequest(request);
+      const user = await this.sessionVerifier.verifyUserFromRequest(
+        request,
+        guardType,
+      );
 
       // Attach user to request
       request.user = {
-        id: user.id,
-        email: user.email,
-        roles: user.roles,
+        id: user?.id,
+        email: user?.email,
+        roles: user?.roles,
       };
 
       return role === 'admin' ? user.roles.includes('admin') : true;

@@ -63,24 +63,30 @@ export class AnalyticsService {
     interval: 'day' | 'week' | 'month' = 'day',
   ) {
     try {
-      const sqlInterval =
-        interval === 'day'
-          ? 'DATE_TRUNC(\'day\', c."timestamp")'
-          : interval === 'week'
-          ? 'DATE_TRUNC(\'week\', c."timestamp")'
-          : 'DATE_TRUNC(\'month\', c."timestamp")';
+      // Build the raw SQL query string with embedded DATE_TRUNC directly
+      const intervalTrunc = {
+        day: 'DATE_TRUNC(\'day\', c."timestamp")',
+        week: 'DATE_TRUNC(\'week\', c."timestamp")',
+        month: 'DATE_TRUNC(\'month\', c."timestamp")',
+      }[interval];
 
-      const timeline = await this.prisma.$queryRaw<any[]>`
-      SELECT ${sqlInterval} AS date, COUNT(*) AS count
+      // Embed the full query as a string
+      const query = `
+      SELECT ${intervalTrunc} AS date, COUNT(*) AS count
       FROM "conversions" c
       JOIN "conversion_interactions" ci ON ci."conversionId" = c.id
       JOIN "interactions" i ON ci."interactionId" = i.id
       JOIN "codes" co ON i."codeId" = co.id
-      WHERE co."campaignId" = ${campaignId}
+      WHERE co."campaignId" = $1
       GROUP BY date
       ORDER BY date ASC
     `;
-      this.logger.log('Timeline: ', timeline);
+
+      // Use $queryRawUnsafe with parameter binding to prevent SQL injection
+      const timeline = await this.prisma.$queryRawUnsafe<any[]>(
+        query,
+        campaignId,
+      );
 
       return new OkResponse(
         timeline.map((r) => ({

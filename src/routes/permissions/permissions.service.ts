@@ -11,7 +11,10 @@ import { NotFoundResponse } from 'src/shared/res/responses/not-found.response';
 import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
 import { Logger } from '@nestjs/common/services/logger.service';
 import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
-import { RedisCacheableKeyPrefixes } from 'src/shared/constants/redis.constants';
+import {
+  RedisCacheableKeyPrefixes,
+  RedisKeyPrefixes,
+} from 'src/shared/constants/redis.constants';
 import { ForbiddenResponse } from 'src/shared/res/responses/forbidden.response';
 import { PrismaTransactionService } from 'src/shared/services/transaction/prisma-transaction.service';
 import { AuditService } from 'src/shared/services/common/audit.service';
@@ -261,6 +264,7 @@ export class PermissionsService {
 
   private async invalidatePermissionsCache() {
     await Promise.allSettled([
+      this.redis.del(RedisKeyPrefixes.PERMISSION_PROVIDER),
       this.redis.delByPattern(`${RedisCacheableKeyPrefixes.ROLE_PERMISSIONS}*`),
       this.redis.delByPattern(`${RedisCacheableKeyPrefixes.ALL_PERMISSIONS}*`),
       this.redis.delByPattern(`${RedisCacheableKeyPrefixes.USER_PERMISSIONS}*`),

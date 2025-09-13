@@ -87,7 +87,7 @@ export class CampaignService {
         );
 
         return [createdCampaign, createdCode] as const;
-      });
+      }, 'regionId and channelId');
 
       await this.invalidateCampaignCache(path);
 
@@ -96,8 +96,12 @@ export class CampaignService {
         'Your campaign has been created successfully',
       );
     } catch (error) {
-      this.logger.error(error);
-      return new InternalServerErrorResponse();
+      return handleError(
+        'CampaignService.createCampaign',
+        error,
+        'Failed to create campaign',
+        this.logger,
+      );
     }
   }
 

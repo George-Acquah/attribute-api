@@ -10,7 +10,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CodesService } from './codes.service';
-import { FirebaseAuthGuard } from 'src/shared/guards/firebase-auth.guard';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 import {
   ApiCreatedResponseWithModel,
@@ -29,10 +28,12 @@ import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { CodeDto } from './dto/get-code.dto';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { ApiTags } from '@nestjs/swagger';
+import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
+import { RequirePermission } from 'src/shared/decorators/require-permission.decorator';
 
 const CONTROLLER_PATH = 'codes';
 @ApiTags('Codes')
-@UseGuards(FirebaseAuthGuard, PoliciesGuard)
+@UseGuards(SessionAuthGuard, PoliciesGuard)
 @UseInterceptors(CacheInterceptor)
 @Controller(CONTROLLER_PATH)
 @ApiGlobalResponses()
@@ -67,7 +68,7 @@ export class CodesController {
 
   @Get('/campaign/:campaignId')
   @ApiPaginatedResponse(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
+  @RequirePermission(Action.Read, 'Code')
   @Cacheable(
     (_, query) => buildPaginatedListCacheKey(CONTROLLER_PATH, query),
     60,
