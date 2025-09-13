@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common/decorators/modules/module.decorator';
-import { PaginationService } from 'src/shared/services/common/pagination.service';
 import { CaslAbilityFactory } from 'src/shared/providers/casl.provider';
-import { AuditService } from 'src/shared/services/common/audit.service';
+// import { AuditService } from 'src/shared/services/common/audit.service';
 import { PrismaTransactionService } from 'src/shared/services/transaction/prisma-transaction.service';
 import { CountryService } from './country.service';
 import { CountryController } from './country.controller';
@@ -10,9 +9,8 @@ import { CountryController } from './country.controller';
   controllers: [CountryController],
   providers: [
     CountryService,
-    PaginationService,
     CaslAbilityFactory,
-    AuditService,
+    // AuditService,
     PrismaTransactionService,
   ],
 })

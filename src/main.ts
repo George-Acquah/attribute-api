@@ -62,18 +62,30 @@ async function bootstrap() {
           : 'http://localhost:' + port,
         isProduction ? 'Production server' : 'Local development server',
       )
+
+      // ✅ Tags (alphabetically sorted and with updated descriptions)
+      .addTag('Analytics', 'Reports, KPIs, and insights')
+      .addTag('Attribution', 'Attribution logic and credit assignment')
       .addTag('Auth', 'Authentication and user management')
-      .addTag('Users', 'User profiles and roles')
       .addTag('Campaigns', 'Campaign creation, targeting, and management')
+      .addTag('Channel', 'Media or marketing channels used in campaigns')
       .addTag('Codes', 'Promo or QR code generation and tracking')
-      .addTag('Interaction', 'Track user interactions like scans or page views')
       .addTag(
         'Conversion',
         'Capture conversion events (signups, purchases, etc.)',
       )
-      .addTag('Analytics', 'Reports, KPIs, and insights')
-      .addTag('Attribution', 'Attribution logic and credit assignment')
-      .addTag('Redis', 'Session, cache, or temp storage operations')
+      .addTag(
+        'Country',
+        'Manage country-level data used for geo-targeting or analytics',
+      )
+      .addTag('Interaction', 'Track user interactions like scans or page views')
+      .addTag('Permissions', 'Permission management and access control')
+      .addTag('Redis', 'Session, cache, or temporary storage operations')
+      .addTag('Region', 'Manage region-level data such as states or provinces')
+      .addTag('Report', 'Custom reports and data exports')
+      .addTag('Role', 'Role definitions and access levels')
+      .addTag('Users', 'User profiles and roles')
+
       .build();
 
     const document = () => SwaggerModule.createDocument(app, swaggerConfig);

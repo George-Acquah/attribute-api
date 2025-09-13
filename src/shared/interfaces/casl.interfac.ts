@@ -1,5 +1,14 @@
 // ability.types.ts
-import { User, Campaign, Code, RolePermission, Role } from '@prisma/client';
+import {
+  User,
+  Campaign,
+  Code,
+  RolePermission,
+  Role,
+  Channel,
+  Country,
+  Region,
+} from '@prisma/client';
 import { PureAbility } from '@casl/ability';
 import { PrismaQuery, Subjects } from '@casl/prisma';
 import { Action } from '../enums/casl.enums';
@@ -12,6 +21,9 @@ export type AppSubjects =
       Code: Code;
       RolePermission: RolePermission;
       Role: Role;
+      Channel: Channel;
+      Region: Region;
+      Country: Country;
     }>;
 
 export type AppAbility = PureAbility<[Action, AppSubjects], PrismaQuery>;

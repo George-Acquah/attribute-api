@@ -15,5 +15,9 @@ export const RedisCacheableKeyPrefixes = {
   INTERACTIONS_LIST: 'interactions:list:',
   CONVERSIONS_LIST: 'conversions:list:',
   ATTRIBUTIONS_LIST: 'attributions:list:',
-  REPORTS_LIST: 'reports:list:',
+  REPORTS_ALL: 'reports:all:',
+  CHANNELS_ALL: 'channels:all:',
+  COUNTRIES_ALL: 'countries:all:',
+  REGIONS_ALL: 'regions:all:',
+  ROLES_ALL: 'roles:all:',
 };
