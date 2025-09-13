@@ -1,21 +1,19 @@
 import { Module } from '@nestjs/common/decorators/modules/module.decorator';
-import { CampaignService } from './campaign.service';
-import { CampaignController } from './campaign.controller';
 import { PaginationService } from 'src/shared/services/common/pagination.service';
 import { CaslAbilityFactory } from 'src/shared/providers/casl.provider';
-import { UsersModule } from '../users/users.module';
-import { CacheService } from 'src/shared/services/redis/cache.service';
 import { AuditService } from 'src/shared/services/common/audit.service';
+import { PrismaTransactionService } from 'src/shared/services/transaction/prisma-transaction.service';
+import { RoleService } from './role.service';
+import { RoleController } from './role.controller';
 
 @Module({
-  imports: [UsersModule],
-  controllers: [CampaignController],
+  controllers: [RoleController],
   providers: [
-    CampaignService,
+    RoleService,
     PaginationService,
     CaslAbilityFactory,
-    CacheService,
     AuditService,
+    PrismaTransactionService,
   ],
 })
-export class CampaignModule {}
+export class RoleModule {}

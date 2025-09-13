@@ -115,7 +115,7 @@ export class AuthController {
       }
     }
 
-    result.data.sessionCookie = undefined;
+    if (result.data?.sessionCookie) result.data.sessionCookie = undefined;
     res.status(result.statusCode || 200);
     return result;
   }

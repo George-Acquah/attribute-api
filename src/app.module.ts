@@ -13,14 +13,23 @@ import { AttributionModule } from './routes/attribution/attribution.module';
 import { AnalyticsModule } from './routes/analytics/analytics.module';
 import { ReportModule } from './routes/report/report.module';
 import { SessionProviderModule } from './shared/modules/session.module';
+import { PermissionsModule } from './routes/permissions/permissions.module';
 import { Module } from '@nestjs/common/decorators/modules/module.decorator';
 import { ThrottleModule } from './shared/modules/throttle.module';
+import { AlsModule } from './shared/modules/als.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ContextInterceptor } from './shared/interceptors/async-context.interceptor';
+import { ChannelModule } from './routes/channel/channel.module';
+import { CountryModule } from './routes/country/country.module';
+import { RegionModule } from './routes/region/region.module';
+import { RoleModule } from './routes/role/role.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     FirebaseAdminModule,
     SessionProviderModule,
+    AlsModule,
     PrismaModule,
     RedisModule,
     ThrottleModule,
@@ -33,6 +42,17 @@ import { ThrottleModule } from './shared/modules/throttle.module';
     AttributionModule,
     AnalyticsModule,
     ReportModule,
+    PermissionsModule,
+    ChannelModule,
+    CountryModule,
+    RegionModule,
+    RoleModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ContextInterceptor,
+    },
   ],
   controllers: [RedisController],
 })

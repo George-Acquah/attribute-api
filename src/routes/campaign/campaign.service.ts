@@ -18,6 +18,8 @@ import {
   PrismaService,
   RedisService,
 } from 'src/shared/services';
+import { AuditService } from 'src/shared/services/common/audit.service';
+import { PrismaTransactionService } from 'src/shared/services/transaction/prisma-transaction.service';
 import { generateQrDataUrl } from 'src/shared/utils/codes';
 import { handleError } from 'src/shared/utils/errors';
 
@@ -28,6 +30,9 @@ export class CampaignService {
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly redis: RedisService,
+    private readonly transaction: PrismaTransactionService,
+
+    private readonly audit: AuditService,
   ) {}
 
   async createCampaign(
@@ -36,35 +41,55 @@ export class CampaignService {
     path: string,
   ): Promise<ApiResponse<Campaign & { codes: Code[] }>> {
     try {
-      const campaign = await this.prisma.campaign.create({
-        data: {
-          name: dto.name,
-          medium: dto.medium,
-          budget: dto.budget,
-          ownerId: userId,
+      const [campaign, codes] = await this.transaction.run(async (tx) => {
+        const createdCampaign = await tx.campaign.create({
+          data: {
+            name: dto.name,
+            medium: dto.medium,
+            budget: dto.budget,
+            ownerId: userId,
 
-          channelId: dto.channelId,
-          regionId: dto.regionId,
-        },
+            channelId: dto.channelId,
+            regionId: dto.regionId,
+          },
+        });
+
+        const numberOfCodes = dto.numberOfCodes ?? 1;
+        const createdCode = await Promise.all(
+          Array.from({ length: numberOfCodes }).map(async () => {
+            const codeValue = nanoid(8);
+            const qrUrl = await generateQrDataUrl(codeValue);
+            return await tx.code.create({
+              data: {
+                campaignId: createdCampaign.id,
+                code: codeValue,
+
+                qrUrl,
+              },
+            });
+          }),
+        );
+
+        await this.audit.logAction(
+          {
+            action: 'create',
+            entityType: 'Campaign',
+            entityId: createdCampaign.id,
+            metadata: {
+              createdBy: userId,
+              campaignName: createdCampaign.name,
+              channelId: dto.channelId,
+              regionId: dto.regionId,
+              numberOfCodes: numberOfCodes,
+            },
+          },
+          tx,
+        );
+
+        return [createdCampaign, createdCode] as const;
       });
 
-      const codes = await Promise.all(
-        Array.from({ length: dto.numberOfCodes ?? 1 }).map(async () => {
-          const codeValue = nanoid(8);
-          const qrUrl = await generateQrDataUrl(codeValue);
-          return this.prisma.code.create({
-            data: {
-              campaignId: campaign.id,
-              code: codeValue,
-
-              qrUrl,
-            },
-          });
-        }),
-      );
-
-      await this.redis.delByPattern(`${path}:list:*`);
-      await this.redis.delByPattern(`${path}:analytics:*`);
+      await this.invalidateCampaignCache(path);
 
       return new CreatedResponse(
         { ...campaign, codes },
@@ -121,20 +146,46 @@ export class CampaignService {
 
       if (campaign.ownerId !== userId) return new ForbiddenResponse();
 
-      const result = await this.prisma.campaign.update({
-        where: { id },
-        data: {
-          name: dto.name,
-          medium: dto.medium,
-          budget: dto.budget,
-          ownerId: userId,
+      const result = await this.transaction.run(async (tx) => {
+        const updatedCampaign = await tx.campaign.update({
+          where: { id },
+          data: {
+            name: dto.name,
+            medium: dto.medium,
+            budget: dto.budget,
+            ownerId: userId,
 
-          channelId: '',
-          regionId: '',
-        },
+            channelId: '',
+            regionId: '',
+          },
+        });
+
+        await this.audit.logAction(
+          {
+            action: 'update',
+            entityType: 'Campaign',
+            entityId: updatedCampaign.id,
+            metadata: {
+              updatedBy: userId,
+              before: {
+                campaignName: campaign.name,
+                channelId: campaign.channelId,
+                regionId: campaign.regionId,
+              },
+              after: {
+                campaignName: updatedCampaign.name,
+                channelId: updatedCampaign.channelId,
+                regionId: updatedCampaign.regionId,
+              },
+            },
+          },
+          tx,
+        );
+
+        return updatedCampaign;
       });
 
-      await this.redis.del(`${path}:list:*`);
+      await this.invalidateCampaignCache(path);
 
       return new OkResponse(result, 'Campaign updated successfully');
     } catch (error) {
@@ -143,7 +194,7 @@ export class CampaignService {
     }
   }
 
-  async updateWebhookUrl(id: string, webhookUrl: string) {
+  async updateWebhookUrl(id: string, webhookUrl: string, path: string) {
     try {
       if (!id || !webhookUrl) {
         return new BadRequestResponse(
@@ -162,6 +213,8 @@ export class CampaignService {
         where: { id },
         data: { webhookUrl },
       });
+
+      await this.invalidateCampaignCache(path);
 
       return new OkResponse(
         updatedCampaign,
@@ -185,11 +238,32 @@ export class CampaignService {
 
       if (campaign.ownerId !== userId) return new ForbiddenResponse();
 
-      const result = await this.prisma.campaign.delete({
-        where: { id },
+      const result = await this.transaction.run(async (tx) => {
+        const deletedCampaign = await tx.campaign.delete({
+          where: { id },
+        });
+        await this.audit.logAction(
+          {
+            action: 'update',
+            entityType: 'Campaign',
+            entityId: deletedCampaign.id,
+            metadata: {
+              updatedBy: userId,
+              before: {
+                campaignName: campaign.name,
+                channelId: campaign.channelId,
+                regionId: campaign.regionId,
+              },
+              after: null,
+            },
+          },
+          tx,
+        );
+
+        return deletedCampaign;
       });
 
-      await this.redis.delByPattern(`${path}:*`);
+      await this.invalidateCampaignCache(path);
 
       return new OkResponse(result, 'Campaign deleted successfully');
     } catch (error) {
@@ -351,5 +425,12 @@ export class CampaignService {
       this.logger.error('Error in getAnalytics:', error);
       return new InternalServerErrorResponse('Failed to fetch analytics');
     }
+  }
+
+  private async invalidateCampaignCache(path: string) {
+    await Promise.allSettled([
+      this.redis.delByPattern(`${path}:list:*`),
+      this.redis.delByPattern(`${path}:analytics:*`),
+    ]);
   }
 }

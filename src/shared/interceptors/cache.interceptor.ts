@@ -1,19 +1,22 @@
+import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
+import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-context.interface';
 import {
   CallHandler,
-  ExecutionContext,
-  Injectable,
   NestInterceptor,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+} from '@nestjs/common/interfaces/features/nest-interceptor.interface';
 import { RedisService } from '../services/redis/redis.service';
 import { from, Observable, tap } from 'rxjs';
 import {
   CACHE_KEY_METADATA,
   CACHE_TTL_METADATA,
 } from '../decorators/cacheable.decorator';
+import { Reflector } from '@nestjs/core/services/reflector.service';
+import { Request } from 'express';
+// import { Logger } from '@nestjs/common/services/logger.service';
 
 @Injectable()
 export class CacheInterceptor implements NestInterceptor {
+  // private logger = new Logger(CacheInterceptor.name);
   constructor(
     private reflector: Reflector,
     private readonly redisService: RedisService,
@@ -24,14 +27,12 @@ export class CacheInterceptor implements NestInterceptor {
     next: CallHandler,
   ): Promise<Observable<unknown>> {
     const handler = context.getHandler();
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    const cacheKeyMeta = this.reflector.get<string | Function>(
-      CACHE_KEY_METADATA,
-      context.getHandler(),
-    );
+    const cacheKeyMeta = this.reflector.get<
+      string | ((...args: any[]) => string)
+    >(CACHE_KEY_METADATA, handler);
     const ttl = this.reflector.get<number>(CACHE_TTL_METADATA, handler) ?? 60;
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
 
     const args = [
       request.params,
