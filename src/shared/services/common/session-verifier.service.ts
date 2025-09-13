@@ -16,12 +16,16 @@ export class SessionVerifierService {
     private readonly userService: UsersService,
   ) {}
 
-  async verifyUserFromRequest(req: Request): Promise<_ISafeUser> {
+  async verifyUserFromRequest(
+    req: Request,
+    guardType: 'local' | 'auth',
+  ): Promise<_ISafeUser | null> {
     const firebaseCookie = req.cookies?.firebase_session as string;
     const customToken = req.cookies?.custom_session;
 
-    if (!firebaseCookie && !customToken) {
-      throw new UnauthorizedException('Missing session token');
+    if (guardType === 'auth') {
+      if (!firebaseCookie && !customToken)
+        throw new UnauthorizedException('Missing session token');
     }
 
     let uid: string;
@@ -52,16 +56,19 @@ export class SessionVerifierService {
       uid = sessionData.userId;
     }
 
-    // 🧠 Load user from Redis cache (if exists)
-    const cacheKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${uid}`;
-    let user = await this.redis.get<_ISafeUser>(cacheKey);
+    let user: _ISafeUser | null = null;
 
-    if (!user) {
-      user = await this.userService.findByUid(uid, !!firebaseCookie);
-      if (!user) throw new UnauthorizedException('User not found');
-      await this.redis.set(cacheKey, user, 600); // cache for 10 mins
+    if (firebaseCookie || customToken) {
+      // Load user from Redis cache (if exists)
+      const cacheKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${uid}`;
+      user = await this.redis.get<_ISafeUser>(cacheKey);
+
+      if (!user) {
+        user = await this.userService.findByUid(uid, !!firebaseCookie);
+        if (!user) throw new UnauthorizedException('User not found');
+        await this.redis.set(cacheKey, user, 600); // cache for 10 mins
+      }
     }
-
     return user;
   }
 }

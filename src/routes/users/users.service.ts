@@ -10,6 +10,8 @@ import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception
 import { Logger } from '@nestjs/common/services/logger.service';
 import { CaslAbilityFactory } from 'src/shared/providers/casl.provider';
 import { accessibleBy } from '@casl/prisma';
+import { AsyncContextService } from 'src/shared/services/context/async-context.service';
+import { UnAuthorizedResponse } from 'src/shared/res/responses';
 
 @Injectable()
 export class UsersService {
@@ -31,6 +33,7 @@ export class UsersService {
     private prisma: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
+    private readonly context: AsyncContextService,
   ) {}
   async findByUid(uid: string, uidBool = true): Promise<_ISafeUser> {
     try {
@@ -61,7 +64,9 @@ export class UsersService {
     return 'This action adds a new user';
   }
 
-  async findAll(dto: _IPaginationParams, user: _ISafeUser) {
+  async findAll(dto: _IPaginationParams) {
+    const user = this.context.get('user') || null;
+    if (!user) return new UnAuthorizedResponse('User not authenticated');
     const ability = await this.caslAbilityFactory.createForUser(user);
 
     const where = accessibleBy(ability).User;

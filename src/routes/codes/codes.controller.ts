@@ -10,7 +10,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CodesService } from './codes.service';
-import { FirebaseAuthGuard } from 'src/shared/guards/firebase-auth.guard';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 import {
   ApiCreatedResponseWithModel,
@@ -18,9 +17,7 @@ import {
   ApiOkResponseWithModel,
   ApiPaginatedResponse,
 } from 'src/shared/decorators/swagger.decorator';
-import { CheckPolicies } from 'src/shared/decorators/policies.decorator';
 import { Action } from 'src/shared/enums/casl.enums';
-import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { GenerateCodeDto } from './dto/generate-code.dto';
 import { instanceToPlain } from 'class-transformer';
 import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
@@ -29,10 +26,12 @@ import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { CodeDto } from './dto/get-code.dto';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { ApiTags } from '@nestjs/swagger';
+import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
+import { RequirePermission } from 'src/shared/decorators/require-permission.decorator';
 
 const CONTROLLER_PATH = 'codes';
 @ApiTags('Codes')
-@UseGuards(FirebaseAuthGuard, PoliciesGuard)
+@UseGuards(SessionAuthGuard, PoliciesGuard)
 @UseInterceptors(CacheInterceptor)
 @Controller(CONTROLLER_PATH)
 @ApiGlobalResponses()
@@ -41,15 +40,13 @@ export class CodesController {
 
   @Post('campaign/:campaignId/generate')
   @ApiCreatedResponseWithModel(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign'))
+  @RequirePermission(Action.Create, 'Code')
   async generateCodes(
     @Param('campaignId') campaignId: string,
-    @CurrentUser('id') userId: string,
     @Body() dto: GenerateCodeDto,
   ) {
     return await this.codesService.generateCodesForCampaign(
       campaignId,
-      userId,
       instanceToPlain(dto, {
         exposeDefaultValues: true,
       }),
@@ -59,7 +56,7 @@ export class CodesController {
 
   @Get(':codeId')
   @ApiOkResponseWithModel(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Code'))
+  @RequirePermission(Action.Read, 'Code')
   @Cacheable((_, params) => `${CONTROLLER_PATH}:${params.id}`, 60)
   async getCodeById(@Param('codeId') id: string) {
     return await this.codesService.getCodeById(id);
@@ -67,7 +64,7 @@ export class CodesController {
 
   @Get('/campaign/:campaignId')
   @ApiPaginatedResponse(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
+  @RequirePermission(Action.Read, 'Code')
   @Cacheable(
     (_, query) => buildPaginatedListCacheKey(CONTROLLER_PATH, query),
     60,
@@ -81,7 +78,7 @@ export class CodesController {
 
   @Delete(':id')
   @ApiOkResponseWithModel(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Delete, 'Code'))
+  @RequirePermission(Action.Delete, 'Code')
   async softDeleteCode(@Param('id') id: string) {
     return this.codesService.softDeleteCode(id, CONTROLLER_PATH);
   }

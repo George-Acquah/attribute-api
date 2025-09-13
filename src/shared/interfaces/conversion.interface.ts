@@ -4,7 +4,7 @@ export interface _ICreateConversion {
   type: ConversionType;
 
   value?: number;
-  fingerprint?: string;
+  // fingerprint?: string;
 
-  userId: string;
+  // userId: string;
 }

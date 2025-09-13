@@ -19,6 +19,7 @@ import {
   RedisService,
 } from 'src/shared/services';
 import { AuditService } from 'src/shared/services/common/audit.service';
+import { AsyncContextService } from 'src/shared/services/context/async-context.service';
 import { PrismaTransactionService } from 'src/shared/services/transaction/prisma-transaction.service';
 import { generateQrDataUrl } from 'src/shared/utils/codes';
 import { handleError } from 'src/shared/utils/errors';
@@ -31,16 +32,16 @@ export class CampaignService {
     private readonly paginationService: PaginationService,
     private readonly redis: RedisService,
     private readonly transaction: PrismaTransactionService,
-
+    private readonly context: AsyncContextService,
     private readonly audit: AuditService,
   ) {}
 
   async createCampaign(
     dto: _ICreateCampaign,
-    userId: string,
     path: string,
   ): Promise<ApiResponse<Campaign & { codes: Code[] }>> {
     try {
+      const userId = this.context.get('user')?.id;
       const [campaign, codes] = await this.transaction.run(async (tx) => {
         const createdCampaign = await tx.campaign.create({
           data: {
@@ -87,7 +88,7 @@ export class CampaignService {
         );
 
         return [createdCampaign, createdCode] as const;
-      });
+      }, 'regionId and channelId');
 
       await this.invalidateCampaignCache(path);
 
@@ -96,8 +97,12 @@ export class CampaignService {
         'Your campaign has been created successfully',
       );
     } catch (error) {
-      this.logger.error(error);
-      return new InternalServerErrorResponse();
+      return handleError(
+        'CampaignService.createCampaign',
+        error,
+        'Failed to create campaign',
+        this.logger,
+      );
     }
   }
 
@@ -135,10 +140,10 @@ export class CampaignService {
   async updateCampaign(
     id: string,
     dto: Partial<_ICreateCampaign>,
-    userId: string,
     path: string,
   ) {
     try {
+      const userId = this.context.get('user')?.id;
       const campaign = await this.prisma.campaign.findUnique({ where: { id } });
 
       if (!campaign)
@@ -229,8 +234,9 @@ export class CampaignService {
     }
   }
 
-  async deleteCampaign(id: string, userId: string, path: string) {
+  async deleteCampaign(id: string, path: string) {
     try {
+      const userId = this.context.get('user')?.id;
       const campaign = await this.prisma.campaign.findUnique({ where: { id } });
 
       if (!campaign)
@@ -272,7 +278,8 @@ export class CampaignService {
     }
   }
 
-  async getAnalytics(campaignId: string, fingerprint: string, userId: string) {
+  async getAnalytics(campaignId: string, fingerprint: string) {
+    const userId = this.context.get('user')?.id;
     this.logger.log('Getting analytics for', {
       campaignId,
       fingerprint,

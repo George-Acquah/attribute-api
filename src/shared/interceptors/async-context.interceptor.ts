@@ -18,9 +18,7 @@ export class ContextInterceptor implements NestInterceptor {
 
     // Grab authenticated user/admin after AuthGuard
     const ctx: RequestContext = {
-      userId: req.user?.roles?.includes('user') && req.user?.id,
-      adminId: req.user?.roles?.includes('admin') && req.user?.id,
-      roles: req.user?.roles,
+      user: req.user,
       requestId: (req.headers['x-request-id'] as string) || crypto.randomUUID(),
     };
 

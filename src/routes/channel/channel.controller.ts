@@ -20,7 +20,7 @@ import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
-import { Session } from 'src/shared/decorators/session.decorator';
+// import { Session } from 'src/shared/decorators/session.decorator';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { RedisCacheableKeyPrefixes } from 'src/shared/constants/redis.constants';
 import { instanceToPlain } from 'class-transformer';
@@ -30,7 +30,7 @@ import { ChannelService } from './channel.service';
 @ApiTags('Channel')
 @ApiBearerAuth()
 @ApiGlobalResponses()
-@Session('admin')
+// @Session('admin')
 @UseGuards(SessionAuthGuard, PoliciesGuard)
 @Controller('channel')
 export class ChannelController {
