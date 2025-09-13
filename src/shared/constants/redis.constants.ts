@@ -7,7 +7,6 @@ export const RedisKeyPrefixes = {
 export const RedisCacheableKeyPrefixes = {
   USER_PERMISSIONS: 'permissions:user:',
   ROLE_PERMISSIONS: 'permissions:role:',
-  USER_ROLES: 'roles:user:',
   ALL_ROLES: 'roles:all',
   ALL_PERMISSIONS: 'permissions:all',
   USERS_LIST: 'users:list:',

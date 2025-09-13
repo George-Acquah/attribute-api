@@ -20,13 +20,14 @@ import { ApiGlobalResponses } from 'src/shared/decorators/swagger.decorator';
 import { PaginationParams } from 'src/shared/dtos/pagination.dto';
 import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
 import { buildPaginatedListCacheKey } from 'src/shared/utils/cache-key';
-import { ConditionPresetInterceptor } from 'src/shared/interceptors/condition-preset.interceptor';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
 import { Session } from 'src/shared/decorators/session.decorator';
 import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
 import { RedisCacheableKeyPrefixes } from 'src/shared/constants/redis.constants';
 import { instanceToPlain } from 'class-transformer';
+import { CreateRoleDto } from './dtos/create-role.dto';
+import { UpdateRoleDto } from './dtos/update-role.dto';
 
 @ApiTags('Role')
 @ApiBearerAuth()
@@ -51,5 +52,28 @@ export class RoleController {
   @ApiOperation({ summary: 'Get all role permissions' })
   async getAllPermissions(@Query() pagination: PaginationParams) {
     return await this.roleService.findAll(instanceToPlain(pagination));
+  }
+
+  @Post()
+  @RequirePermission(Action.Create, 'Role')
+  @ApiOperation({ summary: 'Create a role' })
+  async create(@Body() body: CreateRoleDto) {
+    const result = await this.roleService.create(body);
+    return result;
+  }
+
+  @Patch(':id')
+  @RequirePermission(Action.Update, 'Role')
+  @ApiOperation({ summary: 'Update a role' })
+  async update(@Param('id') id: string, @Body() body: UpdateRoleDto) {
+    const result = await this.roleService.update(id, body);
+    return result;
+  }
+
+  @Delete(':id')
+  @RequirePermission(Action.Delete, 'Role')
+  @ApiOperation({ summary: 'Delete a role' })
+  async remove(@Param('id') id: string) {
+    return this.roleService.remove(id);
   }
 }

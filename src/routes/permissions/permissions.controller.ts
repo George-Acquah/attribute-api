@@ -42,7 +42,7 @@ export class PermissionsController {
   @Cacheable(
     (_, query, __, user: _ISafeUser) =>
       buildPaginatedListCacheKey(
-        `${RedisCacheableKeyPrefixes.ROLE_PERMISSIONS}:${user.id}`,
+        `${RedisCacheableKeyPrefixes.ALL_PERMISSIONS}:${user.id}`,
         query,
       ),
     60,

@@ -262,6 +262,7 @@ export class PermissionsService {
   private async invalidatePermissionsCache() {
     await Promise.allSettled([
       this.redis.delByPattern(`${RedisCacheableKeyPrefixes.ROLE_PERMISSIONS}*`),
+      this.redis.delByPattern(`${RedisCacheableKeyPrefixes.ALL_PERMISSIONS}*`),
       this.redis.delByPattern(`${RedisCacheableKeyPrefixes.USER_PERMISSIONS}*`),
     ]);
   }
