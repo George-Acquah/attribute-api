@@ -38,3 +38,10 @@ export interface IReportLogFilter {
   campaignId?: string;
   status?: ReportStatus;
 }
+
+export interface _ICreateAdminLog {
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  metadata: object | null;
+}

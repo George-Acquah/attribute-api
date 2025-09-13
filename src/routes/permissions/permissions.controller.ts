@@ -1,15 +1,17 @@
+import { Controller } from '@nestjs/common/decorators/core/controller.decorator';
+import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import {
-  Controller,
+  Delete,
   Get,
+  Patch,
   Post,
+} from '@nestjs/common/decorators/http/request-mapping.decorator';
+import {
   Body,
   Param,
-  Delete,
-  Patch,
   Query,
-  UseInterceptors,
-  UseGuards,
-} from '@nestjs/common';
+} from '@nestjs/common/decorators/http/route-params.decorator';
+import { UseInterceptors } from '@nestjs/common/decorators/core/use-interceptors.decorator';
 import { PermissionsService } from './permissions.service';
 import { CreatePermissionDto } from './dtos/create-permission.dto';
 import { UpdatePermissionDto } from './dtos/update-permission.dto';
@@ -24,6 +26,9 @@ import { ConditionPresetInterceptor } from 'src/shared/interceptors/condition-pr
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
 import { Session } from 'src/shared/decorators/session.decorator';
+import { CacheInterceptor } from 'src/shared/interceptors/cache.interceptor';
+import { RedisCacheableKeyPrefixes } from 'src/shared/constants/redis.constants';
+import { instanceToPlain } from 'class-transformer';
 
 @ApiTags('Permissions')
 @ApiBearerAuth()
@@ -34,17 +39,53 @@ import { Session } from 'src/shared/decorators/session.decorator';
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
-  @Get('role/:roleId')
+  @Cacheable(
+    (_, query, __, user: _ISafeUser) =>
+      buildPaginatedListCacheKey(
+        `${RedisCacheableKeyPrefixes.ROLE_PERMISSIONS}:${user.id}`,
+        query,
+      ),
+    60,
+  )
+  @UseInterceptors(CacheInterceptor)
+  @Get('')
   @RequirePermission(Action.Read, 'RolePermission')
-  @ApiOperation({ summary: 'Get permissions for a role' })
-  async getForRole(@Param('roleId') roleId: string) {
-    return this.permissionsService.findAllForRole(roleId);
+  @ApiOperation({ summary: 'Get all role permissions' })
+  async getAllPermissions(@Query() pagination: PaginationParams) {
+    return this.permissionsService.findAll(instanceToPlain(pagination));
   }
 
   @Cacheable(
-    (_, query) => buildPaginatedListCacheKey('permissions:user', query),
+    (param: { roleId: string }, query, _, user: _ISafeUser) =>
+      buildPaginatedListCacheKey(
+        `${RedisCacheableKeyPrefixes.ROLE_PERMISSIONS}:${user.id}:${param.roleId}`,
+        query,
+      ),
     60,
   )
+  @UseInterceptors(CacheInterceptor)
+  @Get('role/:roleId')
+  @RequirePermission(Action.Read, 'RolePermission')
+  @ApiOperation({ summary: 'Get permissions for a role' })
+  async getForRole(
+    @Param('roleId') roleId: string,
+    @Query() pagination: PaginationParams,
+  ) {
+    return this.permissionsService.findAllForRole(
+      roleId,
+      instanceToPlain(pagination),
+    );
+  }
+
+  @Cacheable(
+    (param: { userId: string }, query, _, user: _ISafeUser) =>
+      buildPaginatedListCacheKey(
+        `${RedisCacheableKeyPrefixes.USER_PERMISSIONS}:${user.id}:${param.userId}`,
+        query,
+      ),
+    60,
+  )
+  @UseInterceptors(CacheInterceptor)
   @Get('user/:userId')
   @RequirePermission(Action.Read, 'RolePermission')
   @ApiOperation({
@@ -54,7 +95,10 @@ export class PermissionsController {
     @Param('userId') userId: string,
     @Query() pagination: PaginationParams,
   ) {
-    return this.permissionsService.findAllForUser(userId, pagination);
+    return this.permissionsService.findAllForUser(
+      userId,
+      instanceToPlain(pagination),
+    );
   }
 
   @UseInterceptors(ConditionPresetInterceptor)

@@ -5,6 +5,7 @@ import { PaginationService } from 'src/shared/services/common/pagination.service
 import { CaslAbilityFactory } from 'src/shared/providers/casl.provider';
 import { UsersModule } from '../users/users.module';
 import { CacheService } from 'src/shared/services/redis/cache.service';
+import { AuditService } from 'src/shared/services/common/audit.service';
 
 @Module({
   imports: [UsersModule],
@@ -14,6 +15,7 @@ import { CacheService } from 'src/shared/services/redis/cache.service';
     PaginationService,
     CaslAbilityFactory,
     CacheService,
+    AuditService,
   ],
 })
 export class CampaignModule {}

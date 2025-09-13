@@ -16,12 +16,16 @@ import { SessionProviderModule } from './shared/modules/session.module';
 import { PermissionsModule } from './routes/permissions/permissions.module';
 import { Module } from '@nestjs/common/decorators/modules/module.decorator';
 import { ThrottleModule } from './shared/modules/throttle.module';
+import { AlsModule } from './shared/modules/als.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ContextInterceptor } from './shared/interceptors/async-context.interceptor';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     FirebaseAdminModule,
     SessionProviderModule,
+    AlsModule,
     PrismaModule,
     RedisModule,
     ThrottleModule,
@@ -35,6 +39,12 @@ import { ThrottleModule } from './shared/modules/throttle.module';
     AnalyticsModule,
     ReportModule,
     PermissionsModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ContextInterceptor,
+    },
   ],
   controllers: [RedisController],
 })

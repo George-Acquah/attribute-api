@@ -1,18 +1,18 @@
+import { Controller } from '@nestjs/common/decorators/core/controller.decorator';
+import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import {
-  Body,
-  Controller,
   Delete,
   Get,
-  Param,
   Patch,
   Post,
+} from '@nestjs/common/decorators/http/request-mapping.decorator';
+import {
+  Body,
+  Param,
   Query,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+} from '@nestjs/common/decorators/http/route-params.decorator';
 import { CampaignService } from './campaign.service';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
-import { CheckPolicies } from 'src/shared/decorators/policies.decorator';
 import { Action } from 'src/shared/enums/casl.enums';
 import { CreateCampaignDto } from './dtos/create-campaign.dto';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
@@ -33,6 +33,8 @@ import { CodeDto } from '../codes/dto/get-code.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { Fingerprint } from 'src/shared/decorators/fingerprints.decorator';
 import { SessionAuthGuard } from 'src/shared/guards/session-auth.guard';
+import { UseInterceptors } from '@nestjs/common/decorators/core/use-interceptors.decorator';
+import { RequirePermission } from 'src/shared/decorators/require-permission.decorator';
 
 const CONTROLLER_PATH = 'campaigns';
 @ApiTags('Campaigns')
@@ -46,96 +48,102 @@ export class CampaignController {
 
   @Post('create')
   @ApiCreatedResponseWithModel(CampaignDto)
-  @CheckPolicies((ability) => ability.can(Action.Create, 'Campaign'))
+  @RequirePermission(Action.Read, 'Campaign')
   async create(
     @CurrentUser('id') userId: string,
     @Body() dto: CreateCampaignDto,
   ) {
-    const result = await this.campaignService.createCampaign(
+    return await this.campaignService.createCampaign(
       dto,
       userId,
       CONTROLLER_PATH,
     );
-
-    return result;
   }
 
   @Get('all')
   @Cacheable(
-    (_, query) => buildPaginatedListCacheKey(CONTROLLER_PATH, query),
+    (_, query, __, user: _ISafeUser) =>
+      buildPaginatedListCacheKey(`${CONTROLLER_PATH}:${user.id}`, query),
     60,
   )
   @ApiPaginatedResponse(CampaignDto)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
+  @RequirePermission(Action.Read, 'Campaign')
   async getAll(@Query() pagination: PaginationParams) {
-    const result = await this.campaignService.findAllCampaigns(pagination);
-    return result;
+    return await this.campaignService.findAllCampaigns(pagination);
   }
 
   @Get(':id')
-  @Cacheable((_, params) => `${CONTROLLER_PATH}:${params.id}`, 60)
+  @Cacheable(
+    (params, _, __, user: _ISafeUser) =>
+      `${CONTROLLER_PATH}:${user.id}:${params.id}`,
+    60,
+  )
   @ApiOkResponseWithModel(CampaignDto)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
+  @RequirePermission(Action.Read, 'Campaign')
   async getOne(@Param('id') id: string) {
-    const result = await this.campaignService.findOneCampaign(id);
-    return result;
+    return await this.campaignService.findOneCampaign(id);
   }
 
   @Patch(':campaignId')
   @ApiOkResponseWithModel(CampaignDto)
-  @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign', 'all'))
+  @RequirePermission(Action.Update, 'Campaign')
   async update(
     @CurrentUser('id') userId: string,
     @Param('campaignId') id: string,
     @Body() dto: UpdateCampaignDto,
   ) {
-    const result = await this.campaignService.updateCampaign(
+    return await this.campaignService.updateCampaign(
       id,
       dto,
       userId,
       CONTROLLER_PATH,
     );
-
-    return result;
   }
 
   @Patch(':campaignId/webhook')
   @ApiOkResponseWithModel(CampaignDto)
-  @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign', 'all'))
+  @RequirePermission(Action.Read, 'Campaign')
   async setWebhookUrl(
     @Param('campaignId') id: string,
     @Query('webhookUrl') webhookUrl: string,
   ) {
-    return await this.campaignService.updateWebhookUrl(id, webhookUrl);
+    return await this.campaignService.updateWebhookUrl(
+      id,
+      webhookUrl,
+      CONTROLLER_PATH,
+    );
   }
 
   @Delete(':campaignId')
-  @CheckPolicies((ability) => ability.can(Action.Delete, 'Campaign'))
+  @RequirePermission(Action.Delete, 'Campaign')
+  @ApiOkResponseWithModel(CampaignDto)
   async remove(
     @CurrentUser('id') userId: string,
     @Param('campaignId') campaignId: string,
   ) {
-    const result = await this.campaignService.deleteCampaign(
+    return await this.campaignService.deleteCampaign(
       campaignId,
       userId,
       CONTROLLER_PATH,
     );
-
-    return result;
   }
 
   @Get(':campaignId/analytics')
   @Cacheable(
-    (_, params) => `${CONTROLLER_PATH}:analytics:${params.campaignId}`,
+    (params) => `${CONTROLLER_PATH}:analytics:${params.campaignId}`,
     60,
   ) // 1 minutes cache
   @ApiOkResponseWithModel(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Campaign'))
+  @RequirePermission(Action.Read, 'Campaign')
   async getAnalytics(
     @Param('campaignId') campaignId: string,
     @Fingerprint('fingerprint') fingerprint: string,
     @CurrentUser('id') userId: string,
   ) {
-    return this.campaignService.getAnalytics(campaignId, fingerprint, userId);
+    return await this.campaignService.getAnalytics(
+      campaignId,
+      fingerprint,
+      userId,
+    );
   }
 }

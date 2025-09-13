@@ -12,11 +12,6 @@ export class UpdatePermissionDto {
   @IsOptional()
   conditions?: any;
 
-  @IsOptional()
   @IsString()
-  roleId?: string;
-
-  @IsOptional()
-  @IsString()
-  roleName?: string;
+  roleId: string;
 }

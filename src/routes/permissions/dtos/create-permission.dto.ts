@@ -13,12 +13,6 @@ export class CreatePermissionDto {
   @IsObject()
   conditions?: Record<string, Record<string, any>>;
 
-  // Accept either roleId or roleName for convenience
-  @IsOptional()
   @IsString()
-  roleId?: string;
-
-  @IsOptional()
-  @IsString()
-  roleName?: string;
+  roleId: string;
 }

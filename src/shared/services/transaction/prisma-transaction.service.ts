@@ -2,6 +2,11 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
 import { Logger } from '@nestjs/common/services/logger.service';
+import {
+  ConflictException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common/exceptions';
 
 @Injectable()
 export class PrismaTransactionService {
@@ -32,18 +37,24 @@ export class PrismaTransactionService {
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       switch (err.code) {
         case 'P2002':
-          return new Error('Duplicate entry detected');
+          return new ConflictException('Duplicate entry detected');
         case 'P2025':
-          return new Error('Record to update/delete does not exist');
+          return new NotFoundException(
+            'Record to update/delete does not exist',
+          );
         default:
-          return new Error(`Database error: ${err.message}`);
+          return new InternalServerErrorException(
+            `Prisma error: ${err.message}`,
+          );
       }
     }
 
     if (err instanceof Prisma.PrismaClientUnknownRequestError) {
-      return new Error('Unknown database error occurred');
+      return new InternalServerErrorException(
+        'Unknown database error occurred',
+      );
     }
 
-    return err;
+    return new InternalServerErrorException(err?.message ?? 'Unexpected error');
   }
 }

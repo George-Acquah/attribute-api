@@ -189,7 +189,7 @@ export class AuthService {
         select: { ...this.selectLoginUserFields, passwordHash: true },
       });
       if (!user || !user.passwordHash)
-        return new ForbiddenResponse('Invalid credentials');
+        return new NotFoundResponse('User with this email does not exist.');
 
       const ok = await bcrypt.compare(password, user.passwordHash);
       if (!ok) return new ForbiddenResponse('Invalid credentials');

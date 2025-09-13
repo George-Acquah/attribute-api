@@ -6,11 +6,15 @@ import { OkResponse } from 'src/shared/res/responses/ok.response';
 import { CreatedResponse } from 'src/shared/res/responses/created.response';
 import { InternalServerErrorResponse } from 'src/shared/res/responses/internal-server-error.response';
 import { PaginatedResponse } from 'src/shared/res/paginated.response';
-import { PaginationParams } from 'src/shared/dtos/pagination.dto';
 import { UpdatePermissionDto } from './dtos/update-permission.dto';
 import { NotFoundResponse } from 'src/shared/res/responses/not-found.response';
 import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
 import { Logger } from '@nestjs/common/services/logger.service';
+import { _IPaginationParams } from 'src/shared/interfaces/pagination.interface';
+import { RedisCacheableKeyPrefixes } from 'src/shared/constants/redis.constants';
+import { ForbiddenResponse } from 'src/shared/res/responses/forbidden.response';
+import { PrismaTransactionService } from 'src/shared/services/transaction/prisma-transaction.service';
+import { AuditService } from 'src/shared/services/common/audit.service';
 
 @Injectable()
 export class PermissionsService {
@@ -19,12 +23,18 @@ export class PermissionsService {
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly redis: RedisService,
+    private readonly auditService: AuditService,
+    private readonly transaction: PrismaTransactionService,
   ) {}
 
-  async findAllForRole(roleId: string) {
-    try {
-      const results = await this.prisma.rolePermission.findMany({
-        where: { roleId },
+  async findAll(pagination?: _IPaginationParams) {
+    return await this.paginationService.paginateAndFilter(
+      this.prisma.rolePermission,
+      {
+        page: pagination?.page,
+        limit: pagination?.limit,
+        searchFields: ['action', 'subject'],
+        searchValue: pagination?.query,
         select: {
           id: true,
           action: true,
@@ -33,16 +43,34 @@ export class PermissionsService {
           roleId: true,
           role: { select: { id: true, name: true } },
         },
-      });
-      return new OkResponse(results);
-    } catch (err) {
-      return new InternalServerErrorResponse(err?.message);
-    }
+      },
+    );
+  }
+
+  async findAllForRole(roleId: string, pagination?: _IPaginationParams) {
+    return await this.paginationService.paginateAndFilter(
+      this.prisma.rolePermission,
+      {
+        page: pagination?.page,
+        limit: pagination?.limit,
+        where: { roleId },
+        searchFields: ['action', 'subject'],
+        searchValue: pagination?.query,
+        select: {
+          id: true,
+          action: true,
+          subject: true,
+          conditions: true,
+          roleId: true,
+          role: { select: { id: true, name: true } },
+        },
+      },
+    );
   }
 
   async findAllForUser(
     userId: string,
-    pagination?: PaginationParams,
+    pagination?: _IPaginationParams,
   ): Promise<PaginatedResponse<any> | InternalServerErrorResponse> {
     try {
       const userRoles = await this.prisma.userRole.findMany({
@@ -56,6 +84,8 @@ export class PermissionsService {
           page: pagination?.page,
           limit: pagination?.limit,
           where: { roleId: { in: roleIds } } as any,
+          searchFields: ['action', 'subject'],
+          searchValue: pagination?.query,
           select: {
             id: true,
             action: true,
@@ -74,36 +104,50 @@ export class PermissionsService {
   async create(dto: CreatePermissionDto) {
     try {
       this.logger.log('DTO is: ', dto);
-      let roleId = dto.roleId;
-      if (!roleId && dto.roleName) {
-        const role = await this.prisma.role.findUnique({
-          where: { name: dto.roleName },
-        });
-        roleId = role?.id;
-      }
 
-      if (!roleId) return new NotFoundResponse('Role not found');
-
-      const created = await this.prisma.rolePermission.create({
-        data: {
-          action: dto.action,
-          subject: dto.subject,
-          conditions: JSON.stringify(dto.conditions) ?? null,
-          roleId,
-        },
-        select: {
-          id: true,
-          action: true,
-          subject: true,
-          conditions: true,
-          roleId: true,
-          role: { select: { id: true, name: true } },
-        },
+      const role = await this.prisma.role.findUnique({
+        where: { id: dto.roleId },
       });
 
-      await this.redis.delByPattern('casl:roles:permissions*');
+      if (!role) return new NotFoundResponse('Role not found');
 
-      return new CreatedResponse(created);
+      const created = await this.transaction.run(async (tx) => {
+        const createdPermission = await tx.rolePermission.create({
+          data: {
+            action: dto.action,
+            subject: dto.subject,
+            conditions: JSON.stringify(dto.conditions) ?? null,
+            roleId: role.id,
+          },
+          select: {
+            id: true,
+            action: true,
+            subject: true,
+            conditions: true,
+            roleId: true,
+            role: { select: { id: true, name: true } },
+          },
+        });
+        await this.auditService.logAction(
+          {
+            action: 'update',
+            entityType: 'RolePermission',
+            entityId: createdPermission.id,
+            metadata: {
+              action: createdPermission.action,
+              subject: createdPermission.subject,
+              conditions: createdPermission.conditions,
+            },
+          },
+          tx,
+        );
+
+        return createdPermission;
+      });
+
+      await this.invalidatePermissionsCache();
+
+      return new CreatedResponse(created, 'Permission created successfully.');
     } catch (err) {
       return new InternalServerErrorResponse(err?.message);
     }
@@ -115,44 +159,65 @@ export class PermissionsService {
         where: { id },
       });
       if (!existing) return new NotFoundResponse('Permission not found');
+      if (existing.roleId !== dto.roleId)
+        return new ForbiddenResponse(
+          'Permission does not belong to the provided role. Ensure both the permission ID and roleId are correct.',
+        );
 
-      let roleId = dto.roleId;
-      if (!roleId && dto.roleName) {
-        const role = await this.prisma.role.findUnique({
-          where: { name: dto.roleName },
-        });
-        roleId = role?.id;
-      }
-
-      const updated = await this.prisma.rolePermission.update({
-        where: {
-          roleId_action_subject: {
-            roleId: roleId,
-            action: dto.action,
-            subject: dto.subject,
+      const updated = await this.transaction.run(async (tx) => {
+        const updatedPermission = await tx.rolePermission.update({
+          where: {
+            roleId_action_subject: {
+              roleId: existing.roleId,
+              action: dto.action,
+              subject: dto.subject,
+            },
           },
-        },
-        data: {
-          action: dto.action ?? existing.action,
-          subject: dto.subject ?? existing.subject,
-          conditions:
-            JSON.stringify(dto.conditions) ??
-            JSON.stringify(existing.conditions),
-          ...(roleId ? { roleId } : {}),
-        },
-        select: {
-          id: true,
-          action: true,
-          subject: true,
-          conditions: true,
-          roleId: true,
-          role: { select: { id: true, name: true } },
-        },
+          data: {
+            action: dto.action ?? existing.action,
+            subject: dto.subject ?? existing.subject,
+            conditions:
+              JSON.stringify(dto.conditions) ??
+              JSON.stringify(existing.conditions),
+            ...(dto.roleId ? { roleId: dto.roleId } : {}),
+          },
+          select: {
+            id: true,
+            action: true,
+            subject: true,
+            conditions: true,
+            roleId: true,
+            role: { select: { id: true, name: true } },
+          },
+        });
+
+        await this.auditService.logAction(
+          {
+            action: 'update',
+            entityType: 'RolePermission',
+            entityId: updatedPermission.id,
+            metadata: {
+              before: {
+                action: existing.action,
+                subject: existing.subject,
+                conditions: existing.conditions,
+              },
+              after: {
+                action: updatedPermission.action,
+                subject: updatedPermission.subject,
+                conditions: updatedPermission.conditions,
+              },
+            },
+          },
+          tx,
+        );
+
+        return updatedPermission;
       });
 
-      await this.redis.delByPattern('casl:roles:permissions*');
+      await this.invalidatePermissionsCache();
 
-      return new OkResponse(updated);
+      return new OkResponse(updated, 'Permission updated successfully.');
     } catch (err) {
       return new InternalServerErrorResponse(err?.message);
     }
@@ -164,12 +229,40 @@ export class PermissionsService {
         where: { id },
       });
       if (!existing) return new NotFoundResponse('Permission not found');
+      await this.transaction.run(async (tx) => {
+        await tx.rolePermission.delete({ where: { id } });
+        await this.auditService.logAction(
+          {
+            action: 'delete',
+            entityType: 'RolePermission',
+            entityId: existing.id,
+            metadata: {
+              before: {
+                action: existing.action,
+                subject: existing.subject,
+                conditions: existing.conditions,
+              },
+              after: null,
+            },
+          },
+          tx,
+        );
+      });
 
-      await this.prisma.rolePermission.delete({ where: { id } });
-      await this.redis.delByPattern('casl:roles:permissions*');
-      return new OkResponse({ success: true });
+      await this.invalidatePermissionsCache();
+      return new OkResponse(
+        { success: true },
+        'Permission deleted successfully.',
+      );
     } catch (err) {
       return new InternalServerErrorResponse(err?.message);
     }
+  }
+
+  private async invalidatePermissionsCache() {
+    await Promise.allSettled([
+      this.redis.delByPattern(`${RedisCacheableKeyPrefixes.ROLE_PERMISSIONS}*`),
+      this.redis.delByPattern(`${RedisCacheableKeyPrefixes.USER_PERMISSIONS}*`),
+    ]);
   }
 }
