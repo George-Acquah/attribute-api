@@ -15,7 +15,6 @@ import { CampaignService } from './campaign.service';
 import { PoliciesGuard } from 'src/shared/guards/policies.guard';
 import { Action } from 'src/shared/enums/casl.enums';
 import { CreateCampaignDto } from './dtos/create-campaign.dto';
-import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { PaginationParams } from 'src/shared/dtos/pagination.dto';
 import { UpdateCampaignDto } from './dtos/update-campaign.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
@@ -49,15 +48,8 @@ export class CampaignController {
   @Post('create')
   @ApiCreatedResponseWithModel(CampaignDto)
   @RequirePermission(Action.Read, 'Campaign')
-  async create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateCampaignDto,
-  ) {
-    return await this.campaignService.createCampaign(
-      dto,
-      userId,
-      CONTROLLER_PATH,
-    );
+  async create(@Body() dto: CreateCampaignDto) {
+    return await this.campaignService.createCampaign(dto, CONTROLLER_PATH);
   }
 
   @Get('all')
@@ -88,16 +80,10 @@ export class CampaignController {
   @ApiOkResponseWithModel(CampaignDto)
   @RequirePermission(Action.Update, 'Campaign')
   async update(
-    @CurrentUser('id') userId: string,
     @Param('campaignId') id: string,
     @Body() dto: UpdateCampaignDto,
   ) {
-    return await this.campaignService.updateCampaign(
-      id,
-      dto,
-      userId,
-      CONTROLLER_PATH,
-    );
+    return await this.campaignService.updateCampaign(id, dto, CONTROLLER_PATH);
   }
 
   @Patch(':campaignId/webhook')
@@ -117,13 +103,9 @@ export class CampaignController {
   @Delete(':campaignId')
   @RequirePermission(Action.Delete, 'Campaign')
   @ApiOkResponseWithModel(CampaignDto)
-  async remove(
-    @CurrentUser('id') userId: string,
-    @Param('campaignId') campaignId: string,
-  ) {
+  async remove(@Param('campaignId') campaignId: string) {
     return await this.campaignService.deleteCampaign(
       campaignId,
-      userId,
       CONTROLLER_PATH,
     );
   }
@@ -138,12 +120,7 @@ export class CampaignController {
   async getAnalytics(
     @Param('campaignId') campaignId: string,
     @Fingerprint('fingerprint') fingerprint: string,
-    @CurrentUser('id') userId: string,
   ) {
-    return await this.campaignService.getAnalytics(
-      campaignId,
-      fingerprint,
-      userId,
-    );
+    return await this.campaignService.getAnalytics(campaignId, fingerprint);
   }
 }

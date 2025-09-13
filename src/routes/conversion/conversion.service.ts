@@ -9,6 +9,7 @@ import { Logger } from '@nestjs/common/services/logger.service';
 import { BadRequestResponse, OkResponse } from 'src/shared/res/responses';
 import { NotFoundException } from '@nestjs/common';
 import { handleError } from 'src/shared/utils/errors';
+import { AsyncContextService } from 'src/shared/services/context/async-context.service';
 
 @Injectable()
 export class ConversionService {
@@ -16,16 +17,16 @@ export class ConversionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly attributionService: AttributionService,
+    private readonly context: AsyncContextService,
     private readonly transaction: PrismaTransactionService,
   ) {}
 
-  async createConversion({
-    type,
-    value,
-    fingerprint,
-    userId,
-  }: _ICreateConversion) {
+  async createConversion(
+    { type, value }: _ICreateConversion,
+    fingerprint: string,
+  ) {
     if (!fingerprint) return new BadRequestResponse();
+    const userId = this.context.get('user')?.id || null;
 
     try {
       const result = await this.transaction.run(async (tx) => {

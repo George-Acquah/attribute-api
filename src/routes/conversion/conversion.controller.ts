@@ -1,5 +1,4 @@
 import { ConversionService } from './conversion.service';
-import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { CreateConversionDto } from './dtos/create-conversion.dto';
 import { instanceToPlain } from 'class-transformer';
 import { _ICreateConversion } from 'src/shared/interfaces/conversion.interface';
@@ -23,12 +22,10 @@ export class ConversionController {
   async createConversion(
     @Body() dto: CreateConversionDto,
     @Fingerprint('fingerprint') fingerprint: string,
-    @CurrentUser('id') userId: string,
   ) {
-    return await this.conversionService.createConversion({
-      ...(instanceToPlain(dto) as Omit<_ICreateConversion, 'userId'>),
-      userId,
+    return await this.conversionService.createConversion(
+      instanceToPlain(dto) as _ICreateConversion,
       fingerprint,
-    });
+    );
   }
 }

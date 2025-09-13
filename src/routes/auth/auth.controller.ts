@@ -1,7 +1,6 @@
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { BearerToken } from 'src/shared/decorators/bearer-token.decorator';
-import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Cookies } from 'src/shared/decorators/cookies.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { CredentialsRegisterDto } from './dtos/credentials-register.dto';
@@ -127,8 +126,8 @@ export class AuthController {
   @ApiOkResponseWithModel(LoginResponseDto, 'Get current logged in user info')
   @ApiOperation({ summary: 'Get current logged in user info' })
   @Get('me')
-  async getMe(@CurrentUser('email') email: string) {
-    const result = await this.authService.getUserInfo(email);
+  async getMe() {
+    const result = await this.authService.getUserInfo();
     return result;
   }
 
@@ -139,12 +138,11 @@ export class AuthController {
   @Post('logout')
   async logout(
     @Cookies('session') sessionCookie: _ISessionCookie,
-    @CurrentUser('id') id: string,
     @Res({ passthrough: true }) res: Response,
   ) {
     if (!sessionCookie?.token || !sessionCookie?.type)
       return new UnAuthorizedResponse('No session cookie found');
-    const result = await this.authService.revokeTokens(sessionCookie, id);
+    const result = await this.authService.revokeTokens(sessionCookie);
 
     if (sessionCookie.type === 'firebase') {
       res.clearCookie('firebase_session');

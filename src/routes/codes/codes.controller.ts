@@ -17,9 +17,7 @@ import {
   ApiOkResponseWithModel,
   ApiPaginatedResponse,
 } from 'src/shared/decorators/swagger.decorator';
-import { CheckPolicies } from 'src/shared/decorators/policies.decorator';
 import { Action } from 'src/shared/enums/casl.enums';
-import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { GenerateCodeDto } from './dto/generate-code.dto';
 import { instanceToPlain } from 'class-transformer';
 import { Cacheable } from 'src/shared/decorators/cacheable.decorator';
@@ -42,15 +40,13 @@ export class CodesController {
 
   @Post('campaign/:campaignId/generate')
   @ApiCreatedResponseWithModel(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Update, 'Campaign'))
+  @RequirePermission(Action.Create, 'Code')
   async generateCodes(
     @Param('campaignId') campaignId: string,
-    @CurrentUser('id') userId: string,
     @Body() dto: GenerateCodeDto,
   ) {
     return await this.codesService.generateCodesForCampaign(
       campaignId,
-      userId,
       instanceToPlain(dto, {
         exposeDefaultValues: true,
       }),
@@ -60,7 +56,7 @@ export class CodesController {
 
   @Get(':codeId')
   @ApiOkResponseWithModel(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Code'))
+  @RequirePermission(Action.Read, 'Code')
   @Cacheable((_, params) => `${CONTROLLER_PATH}:${params.id}`, 60)
   async getCodeById(@Param('codeId') id: string) {
     return await this.codesService.getCodeById(id);
@@ -82,7 +78,7 @@ export class CodesController {
 
   @Delete(':id')
   @ApiOkResponseWithModel(CodeDto)
-  @CheckPolicies((ability) => ability.can(Action.Delete, 'Code'))
+  @RequirePermission(Action.Delete, 'Code')
   async softDeleteCode(@Param('id') id: string) {
     return this.codesService.softDeleteCode(id, CONTROLLER_PATH);
   }

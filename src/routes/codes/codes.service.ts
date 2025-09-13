@@ -11,6 +11,7 @@ import {
   InternalServerErrorResponse,
 } from 'src/shared/res/responses';
 import { PaginationService } from 'src/shared/services/common/pagination.service';
+import { AsyncContextService } from 'src/shared/services/context/async-context.service';
 import { PrismaService } from 'src/shared/services/prisma/prisma.service';
 import { RedisService } from 'src/shared/services/redis/redis.service';
 import { generateQrDataUrl } from 'src/shared/utils/codes';
@@ -23,15 +24,16 @@ export class CodesService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly paginationService: PaginationService,
+    private readonly context: AsyncContextService,
   ) {}
 
   async generateCodesForCampaign(
     campaignId: string,
-    userId: string,
     dto: _IGenerateCode,
     key: string,
   ) {
     try {
+      const userId = this.context.get('user')?.id;
       const campaign = await this.prisma.campaign.findUnique({
         where: { id: campaignId, deletedAt: null },
       });

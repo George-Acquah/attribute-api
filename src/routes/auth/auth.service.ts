@@ -14,10 +14,12 @@ import {
   InternalServerErrorResponse,
   NotFoundResponse,
   CreatedResponse,
+  UnAuthorizedResponse,
 } from 'src/shared/res/responses';
 import { nanoid } from 'nanoid';
 import * as bcrypt from 'bcrypt';
 import { _ILoginUser } from 'src/shared/interfaces/users.interface';
+import { AsyncContextService } from 'src/shared/services/context/async-context.service';
 
 @Injectable()
 export class AuthService {
@@ -45,6 +47,7 @@ export class AuthService {
     private readonly firebaseService: FirebaseAdminService,
     private readonly redisService: RedisService,
     private readonly transaction: PrismaTransactionService,
+    private readonly context: AsyncContextService,
   ) {}
 
   async authenticateUser(
@@ -120,10 +123,12 @@ export class AuthService {
     }
   }
 
-  async getUserInfo(email: string): Promise<ApiResponse<_ILoginUser>> {
+  async getUserInfo(): Promise<ApiResponse<_ILoginUser>> {
     try {
+      const id = this.context.get('user')?.id;
+      if (!id) return new UnAuthorizedResponse('User not authenticated');
       const user = await this.prisma.user.findUnique({
-        where: { email },
+        where: { id },
         select: this.selectLoginUserFields,
       });
 
@@ -214,11 +219,13 @@ export class AuthService {
     }
   }
 
-  async revokeTokens(
-    { type, token: sessionToken }: _ISessionCookie,
-    uid: string,
-  ): Promise<ApiResponse<null>> {
+  async revokeTokens({
+    type,
+    token: sessionToken,
+  }: _ISessionCookie): Promise<ApiResponse<null>> {
     try {
+      const id = this.context.get('user')?.id;
+      if (!id) return new UnAuthorizedResponse('User not authenticated');
       if (type === 'firebase') {
         const decodedClaims = await this.firebaseService.verifySessionCookie(
           sessionToken,
@@ -226,17 +233,16 @@ export class AuthService {
 
         await this.firebaseService.removeRefreshTokens(decodedClaims.sub);
 
-        const firebaseSessionKey = `${RedisKeyPrefixes.FIREBASE_SESSION}${uid}`;
-        const userDataKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${uid}`;
+        const firebaseSessionKey = `${RedisKeyPrefixes.FIREBASE_SESSION}${id}`;
+        const userDataKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${id}`;
 
         await Promise.all([
           this.redisService.del(firebaseSessionKey),
           this.redisService.del(userDataKey),
         ]);
       } else {
-        // ✅ Custom session — delete session and user data from Redis
         const customSessionKey = `${RedisKeyPrefixes.CUSTOM_SESSION}:${sessionToken}`;
-        const userDataKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${uid}`;
+        const userDataKey = `${RedisKeyPrefixes.SESSION_USER_KEY}${id}`;
 
         await Promise.all([
           this.redisService.del(customSessionKey),
