@@ -6,11 +6,12 @@ import { RedisService } from '../services';
 import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator';
 import { Logger } from '@nestjs/common/services/logger.service';
 import { AppAbility, AppSubjects } from '../interfaces/casl.interfac';
+import { RedisKeyPrefixes } from '../constants/redis.constants';
 
 @Injectable()
 export class CaslAbilityFactory {
   private readonly logger = new Logger(CaslAbilityFactory.name);
-  private readonly ROLES_CACHE_KEY = 'casl:roles:permissions';
+  private readonly ROLES_CACHE_KEY = RedisKeyPrefixes.PERMISSION_PROVIDER;
   private readonly ROLES_CACHE_TTL = 60 * 60 * 24; // 1 day
 
   constructor(
@@ -101,7 +102,6 @@ export class CaslAbilityFactory {
       },
     });
 
-    this.logger.log('Final ability rules:', ability.rules);
     return ability;
   }
 }
