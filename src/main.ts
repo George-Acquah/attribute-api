@@ -30,6 +30,7 @@ async function bootstrap() {
         ? [
             'https://attribute-kappa.vercel.app',
             'https://attribute-api1.onrender.com',
+            `http://localhost:3000`,
             `https://localhost:${port}`,
           ]
         : [
