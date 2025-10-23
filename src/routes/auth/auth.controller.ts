@@ -26,6 +26,7 @@ import {
 import {
   Body,
   Res,
+  Req,
 } from '@nestjs/common/decorators/http/route-params.decorator';
 import { HttpStatus } from '@nestjs/common/enums/http-status.enum';
 import { Session } from 'src/shared/decorators/session.decorator';
@@ -69,6 +70,7 @@ export class AuthController {
   @Post('login')
   async login(
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request, // <-- ADDED: Inject Request object to check headers
     @BearerToken('Bearer') token?: string,
     @Body() body?: Partial<CredentialsLoginDto>,
   ) {
@@ -80,6 +82,18 @@ export class AuthController {
 
     const isFirebaseLogin = !!token;
 
+      // --- START OF FIX: Determine if the request is from a local development environment ---
+  const requestOrigin = req.headers.origin || req.headers.host || '';
+  const isLocalhostRequest = requestOrigin.includes('localhost') || requestOrigin.includes('127.0.0.1');
+
+  // Determine cookie security flags:
+  // secure should be TRUE only if it's PROD AND not localhost.
+  const isSecure = process.env.NODE_ENV === 'production' && !isLocalhostRequest;
+  
+  // sameSite should be 'none' only if it's PROD AND secure is TRUE. Otherwise, use 'lax' for local safety.
+  const sameSiteMode = isSecure ? 'none' : 'lax';
+  // --- END OF FIX ---
+
     const expiresIn = 60 * 60 * 24 * 14 * 1000;
 
     function setCookie(
@@ -89,8 +103,8 @@ export class AuthController {
       return res.cookie(cookieKey, sessionCookie, {
         maxAge: expiresIn,
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: isSecure,       // <-- USING NEW VARIABLE
+      sameSite: sameSiteMode, // <-- USING NEW VARIABLE
       });
     }
 
