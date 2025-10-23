@@ -1,5 +1,5 @@
 import { AuthService } from './auth.service';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { BearerToken } from 'src/shared/decorators/bearer-token.decorator';
 import { Cookies } from 'src/shared/decorators/cookies.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
